@@ -1,0 +1,1 @@
+{"name":"ta-manager","version":"1.0.0","description":"Aplikasi Manajemen Tugas Akhir Next.js","main":"index.js","scripts":{"dev":"next dev","build":"next build","start":"next start"},"dependencies":{"citation-js":"^0.5.0","next":"14.1.4","react":"18.2.0","react-dom":"18.2.0"},"devDependencies":{},"keywords":[],"license":"MIT"}
