@@ -507,7 +507,6 @@ export default function KalenderPage() {
                         }}
                       />
                     )}
-                    localeText={{ timePickerToolbarTitle: "Waktu" }}
                   />
                 </label>
               </div>
@@ -542,7 +541,6 @@ export default function KalenderPage() {
                         }}
                       />
                     )}
-                    localeText={{ timePickerToolbarTitle: "Waktu" }}
                   />
                 </label>
               </div>
