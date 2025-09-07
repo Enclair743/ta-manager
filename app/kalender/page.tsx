@@ -1,3 +1,9 @@
+declare global {
+  interface Window {
+    google?: any;
+  }
+}
+
 "use client";
 import { useEffect, useRef, useState } from "react";
 import TextField from "@mui/material/TextField";
