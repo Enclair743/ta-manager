@@ -267,6 +267,136 @@ export default function PenulisanPage() {
     color: "#23272f",
   };
 
+  // ----- Checklist Item Layout -----
+  function renderChecklistList({
+    list,
+    onCheck,
+    onEdit,
+    onDelete,
+    editId,
+    editText,
+    setEditText,
+    onEditSave,
+    setEditId,
+    placeholder,
+    newValue,
+    setNewValue,
+    onAdd,
+  }: {
+    list: ChecklistItem[];
+    onCheck: (idx: number) => void;
+    onEdit: (item: ChecklistItem) => void;
+    onDelete: (id: string) => void;
+    editId: string | null;
+    editText: string;
+    setEditText: (txt: string) => void;
+    onEditSave: () => void;
+    setEditId: (id: string | null) => void;
+    placeholder: string;
+    newValue: string;
+    setNewValue: (txt: string) => void;
+    onAdd: () => void;
+  }) {
+    return (
+      <>
+        <ul style={{
+          listStyle: "none",
+          padding: 0,
+          marginBottom: "1em",
+        }}>
+          {list.map((item, i) => (
+            <li key={item.id} style={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "flex-start",
+              marginBottom: "1.3em",
+              background: item.checked
+                ? (theme === "dark" ? "#23272f" : "#e0e7ff")
+                : (theme === "dark" ? "#23272f" : "#fff"),
+              borderRadius: "10px",
+              padding: "1em",
+              boxShadow: item.checked
+                ? "0 4px 16px rgba(99,102,241,0.15)"
+                : "0 2px 8px rgba(99,102,241,0.05)",
+              border: item.checked
+                ? "1.5px solid #6366f1"
+                : "1px solid #353a47",
+              color: theme === "dark" ? "#f3f4f6" : "#222",
+              transition: "box-shadow 0.2s, background 0.2s"
+            }}>
+              <div style={{ display: "flex", alignItems: "center", width: "100%" }}>
+                <input
+                  type="checkbox"
+                  checked={item.checked}
+                  onChange={() => onCheck(i)}
+                  style={{
+                    marginRight: "1em",
+                    accentColor: "#6366f1",
+                    width: "1.2em",
+                    height: "1.2em",
+                  }}
+                />
+                {editId === item.id ? (
+                  <>
+                    <input
+                      type="text"
+                      value={editText}
+                      onChange={e => setEditText(e.target.value)}
+                      style={{
+                        flex: 1,
+                        marginRight: "0.5em",
+                        padding: "0.5em",
+                        borderRadius: "6px",
+                        border: "1px solid #6366f1"
+                      }}
+                    />
+                    <button onClick={onEditSave}
+                      style={{ ...btn, marginRight: "0.3em" }}>Simpan</button>
+                    <button onClick={() => setEditId(null)}
+                      style={btnGray}>Batal</button>
+                  </>
+                ) : (
+                  <>
+                    <span style={{ flex: 1, fontWeight: 500, fontSize: "1.08em" }}>{item.text}</span>
+                    <button onClick={() => onEdit(item)}
+                      style={{ ...btn, marginRight: "0.3em" }}>Edit</button>
+                    <button onClick={() => onDelete(item.id)}
+                      style={btnRed}>Hapus</button>
+                  </>
+                )}
+              </div>
+            </li>
+          ))}
+        </ul>
+        <div style={{ display: "flex", gap: "0.6em", marginTop: "0.5em" }}>
+          <input
+            type="text"
+            value={newValue}
+            onChange={e => setNewValue(e.target.value)}
+            placeholder={placeholder}
+            style={{
+              flex: 1,
+              padding: "0.7em",
+              borderRadius: "8px",
+              border: "1.5px solid #6366f1",
+              fontSize: "1em"
+            }}
+          />
+          <button
+            onClick={onAdd}
+            style={{
+              ...btn,
+              padding: "0.7em 1.2em",
+              fontWeight: 500,
+            }}
+          >
+            +
+          </button>
+        </div>
+      </>
+    );
+  }
+
   return (
     <div style={{ maxWidth: 700, margin: "0 auto", marginTop: 30 }}>
       <h1 style={{
@@ -368,200 +498,52 @@ export default function PenulisanPage() {
 
       {/* Checklist Penulisan */}
       <div style={cardStyle}>
-        <h2 style={{ marginBottom: 10 }}>Checklist Penulisan</h2>
-        <ul style={{
-          listStyle: "none",
-          padding: 0,
-          marginBottom: "1em",
-          display: "grid",
-          gridTemplateColumns: "1fr 1fr",
-          gap: "1em",
-        }}>
-          {penulisanList.map((item, i) => (
-            <li key={item.id} style={{
-              display: "flex",
-              alignItems: "center",
-              marginBottom: "0.7em",
-              background: item.checked
-                ? (theme === "dark" ? "linear-gradient(90deg,#353a47,#23272f)" : "#e0e7ff")
-                : (theme === "dark" ? "#23272f" : "#fff"),
-              borderRadius: "14px",
-              padding: "1em",
-              boxShadow: item.checked
-                ? "0 8px 32px rgba(99,102,241,0.18)"
-                : "0 4px 16px rgba(99,102,241,0.10)",
-              border: item.checked
-                ? "1.5px solid #6366f1"
-                : "1px solid #353a47",
-              color: theme === "dark" ? "#f3f4f6" : "#222",
-              transition: "box-shadow 0.2s, background 0.2s"
-            }}>
-              <input
-                type="checkbox"
-                checked={item.checked}
-                onChange={() => handlePenulisanCheck(i)}
-                style={{
-                  marginRight: "1em",
-                  accentColor: "#6366f1",
-                  width: "1.2em",
-                  height: "1.2em",
-                }}
-              />
-              {editPenulisanId === item.id ? (
-                <>
-                  <input
-                    type="text"
-                    value={editPenulisanText}
-                    onChange={e => setEditPenulisanText(e.target.value)}
-                    style={{
-                      flex: 1,
-                      marginRight: "0.5em",
-                      padding: "0.5em",
-                      borderRadius: "6px",
-                      border: "1px solid #6366f1"
-                    }}
-                  />
-                  <button onClick={handlePenulisanEditSave}
-                    style={{ ...btn, marginRight: "0.3em" }}>Simpan</button>
-                  <button onClick={() => setEditPenulisanId(null)}
-                    style={btnGray}>Batal</button>
-                </>
-              ) : (
-                <>
-                  <span style={{ flex: 1, fontWeight: 500 }}>{item.text}</span>
-                  <button onClick={() => startEditPenulisan(item)}
-                    style={{ ...btn, marginRight: "0.3em" }}>Edit</button>
-                  <button onClick={() => handlePenulisanDelete(item.id)}
-                    style={btnRed}>Hapus</button>
-                </>
-              )}
-            </li>
-          ))}
-        </ul>
-        <div style={{ display: "flex", gap: "0.6em", marginTop: "0.5em" }}>
-          <input
-            type="text"
-            value={newPenulisan}
-            onChange={e => setNewPenulisan(e.target.value)}
-            placeholder="Tambah item penulisan..."
-            style={{
-              flex: 1,
-              padding: "0.7em",
-              borderRadius: "8px",
-              border: "1.5px solid #6366f1",
-              fontSize: "1em"
-            }}
-          />
-          <button
-            onClick={handlePenulisanAdd}
-            style={{
-              ...btn,
-              padding: "0.7em 1.2em",
-              fontWeight: 500,
-            }}
-          >
-            +
-          </button>
-        </div>
+        <h2 style={{
+          marginBottom: 10,
+          fontSize: "1.5em",
+          fontWeight: 700,
+          color: theme === "dark" ? "#a5b4fc" : "#6366f1"
+        }}>Checklist Penulisan</h2>
+        {renderChecklistList({
+          list: penulisanList,
+          onCheck: handlePenulisanCheck,
+          onEdit: startEditPenulisan,
+          onDelete: handlePenulisanDelete,
+          editId: editPenulisanId,
+          editText: editPenulisanText,
+          setEditText: setEditPenulisanText,
+          onEditSave: handlePenulisanEditSave,
+          setEditId: setEditPenulisanId,
+          placeholder: "Tambah item penulisan...",
+          newValue: newPenulisan,
+          setNewValue: setNewPenulisan,
+          onAdd: handlePenulisanAdd,
+        })}
       </div>
 
       {/* Checklist Tugas */}
       <div style={cardStyle}>
-        <h2 style={{ marginBottom: 10 }}>Checklist Tugas</h2>
-        <ul style={{
-          listStyle: "none",
-          padding: 0,
-          marginBottom: "1em",
-          display: "grid",
-          gridTemplateColumns: "1fr 1fr",
-          gap: "1em",
-        }}>
-          {tugasList.map((item, i) => (
-            <li key={item.id} style={{
-              display: "flex",
-              alignItems: "center",
-              marginBottom: "0.7em",
-              background: item.checked
-                ? (theme === "dark" ? "linear-gradient(90deg,#353a47,#23272f)" : "#e0e7ff")
-                : (theme === "dark" ? "#23272f" : "#fff"),
-              borderRadius: "14px",
-              padding: "1em",
-              boxShadow: item.checked
-                ? "0 8px 32px rgba(99,102,241,0.18)"
-                : "0 4px 16px rgba(99,102,241,0.10)",
-              border: item.checked
-                ? "1.5px solid #6366f1"
-                : "1px solid #353a47",
-              color: theme === "dark" ? "#f3f4f6" : "#222",
-              transition: "box-shadow 0.2s, background 0.2s"
-            }}>
-              <input
-                type="checkbox"
-                checked={item.checked}
-                onChange={() => handleTugasCheck(i)}
-                style={{
-                  marginRight: "1em",
-                  accentColor: "#6366f1",
-                  width: "1.2em",
-                  height: "1.2em",
-                }}
-              />
-              {editTugasId === item.id ? (
-                <>
-                  <input
-                    type="text"
-                    value={editTugasText}
-                    onChange={e => setEditTugasText(e.target.value)}
-                    style={{
-                      flex: 1,
-                      marginRight: "0.5em",
-                      padding: "0.5em",
-                      borderRadius: "6px",
-                      border: "1px solid #6366f1"
-                    }}
-                  />
-                  <button onClick={handleTugasEditSave}
-                    style={{ ...btn, marginRight: "0.3em" }}>Simpan</button>
-                  <button onClick={() => setEditTugasId(null)}
-                    style={btnGray}>Batal</button>
-                </>
-              ) : (
-                <>
-                  <span style={{ flex: 1, fontWeight: 500 }}>{item.text}</span>
-                  <button onClick={() => startEditTugas(item)}
-                    style={{ ...btn, marginRight: "0.3em" }}>Edit</button>
-                  <button onClick={() => handleTugasDelete(item.id)}
-                    style={btnRed}>Hapus</button>
-                </>
-              )}
-            </li>
-          ))}
-        </ul>
-        <div style={{ display: "flex", gap: "0.6em", marginTop: "0.5em" }}>
-          <input
-            type="text"
-            value={newTugas}
-            onChange={e => setNewTugas(e.target.value)}
-            placeholder="Tambah tugas baru..."
-            style={{
-              flex: 1,
-              padding: "0.7em",
-              borderRadius: "8px",
-              border: "1.5px solid #6366f1",
-              fontSize: "1em"
-            }}
-          />
-          <button
-            onClick={handleTugasAdd}
-            style={{
-              ...btn,
-              padding: "0.7em 1.2em",
-              fontWeight: 500,
-            }}
-          >
-            +
-          </button>
-        </div>
+        <h2 style={{
+          marginBottom: 10,
+          fontSize: "1.5em",
+          fontWeight: 700,
+          color: theme === "dark" ? "#a5b4fc" : "#6366f1"
+        }}>Checklist Tugas</h2>
+        {renderChecklistList({
+          list: tugasList,
+          onCheck: handleTugasCheck,
+          onEdit: startEditTugas,
+          onDelete: handleTugasDelete,
+          editId: editTugasId,
+          editText: editTugasText,
+          setEditText: setEditTugasText,
+          onEditSave: handleTugasEditSave,
+          setEditId: setEditTugasId,
+          placeholder: "Tambah tugas baru...",
+          newValue: newTugas,
+          setNewValue: setNewTugas,
+          onAdd: handleTugasAdd,
+        })}
       </div>
 
       {/* Checklist Berkas - di bagian paling bawah */}
