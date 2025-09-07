@@ -32,7 +32,7 @@ export default function KalenderPage() {
 
   // Load GIS script only once
   useEffect(() => {
-    if (typeof window !== "undefined" && !window.google?.accounts?.oauth2) {
+    if (typeof window !== "undefined" && !window['google']?.accounts?.oauth2) {
       const script = document.createElement("script");
       script.src = "https://accounts.google.com/gsi/client";
       script.async = true;
