@@ -1,7 +1,4 @@
 {
-  "/kalender/page": "app/kalender/page.js",
-  "/catatan/page": "app/catatan/page.js",
-  "/penulisan/page": "app/penulisan/page.js",
-  "/referensi/page": "app/referensi/page.js",
+  "/page": "app/page.js",
   "/dashboard/page": "app/dashboard/page.js"
 }
