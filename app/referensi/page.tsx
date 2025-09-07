@@ -67,7 +67,7 @@ export default function ReferensiPage() {
   }
 
   function renderForm() {
-    const inputStyle = {
+    const inputStyle: React.CSSProperties = {
       marginTop: "6px",
       padding: "0.5em 1em",
       borderRadius: "6px",
@@ -78,7 +78,7 @@ export default function ReferensiPage() {
       width: "100%",
       fontSize: "1em"
     };
-    const fieldStyle = {
+    const fieldStyle: React.CSSProperties = {
       display: "flex",
       flexDirection: "column",
       marginBottom: "1.1em"
