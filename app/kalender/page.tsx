@@ -10,7 +10,6 @@ import TextField from "@mui/material/TextField";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { DateTimePicker } from "@mui/x-date-pickers/DateTimePicker";
-// Ganti import locale
 import { id as idLocale } from "date-fns/locale";
 
 export default function KalenderPage() {
@@ -296,23 +295,6 @@ export default function KalenderPage() {
     typeof ev.description === "string" && ev.description.replace(/\s+/g, "").includes("__FROM_APP__")
   );
 
-  // DEBUG: tampilkan semua description event (hapus blok ini jika sudah tidak perlu)
-  // Aktifkan ini untuk cek data mentah dari API!
-  {/*
-  {events.length > 0 && (
-    <div style={{margin:'1em 0',background:'#fff',padding:10,borderRadius:8}}>
-      <b>DEBUG: Semua Event (description):</b>
-      <ul>
-        {events.map(ev => (
-          <li key={ev.id}>
-            <b>{ev.summary}:</b> [{JSON.stringify(ev.description)}] <span>{ev.start?.dateTime}</span>
-          </li>
-        ))}
-      </ul>
-    </div>
-  )}
-  */}
-
   return (
     <div>
       <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={idLocale}>
@@ -491,12 +473,12 @@ export default function KalenderPage() {
                       if (date) setForm({ ...form, start: date });
                     }}
                     ampm={false}
-                    inputFormat="yyyy-MM-dd HH:mm"
+                    format="yyyy-MM-dd HH:mm"
                     minutesStep={5}
-                    renderInput={(params) => (
-                      <TextField {...params}
-                        required
-                        sx={{
+                    slotProps={{
+                      textField: {
+                        required: true,
+                        sx: {
                           marginTop: "8px",
                           width: "100%",
                           background: "#fff",
@@ -504,9 +486,9 @@ export default function KalenderPage() {
                           "& .MuiInputBase-input": {
                             color: theme === "dark" ? "#222" : "#222"
                           }
-                        }}
-                      />
-                    )}
+                        }
+                      }
+                    }}
                   />
                 </label>
               </div>
@@ -525,12 +507,12 @@ export default function KalenderPage() {
                       if (date) setForm({ ...form, end: date });
                     }}
                     ampm={false}
-                    inputFormat="yyyy-MM-dd HH:mm"
+                    format="yyyy-MM-dd HH:mm"
                     minutesStep={5}
-                    renderInput={(params) => (
-                      <TextField {...params}
-                        required
-                        sx={{
+                    slotProps={{
+                      textField: {
+                        required: true,
+                        sx: {
                           marginTop: "8px",
                           width: "100%",
                           background: "#fff",
@@ -538,9 +520,9 @@ export default function KalenderPage() {
                           "& .MuiInputBase-input": {
                             color: theme === "dark" ? "#222" : "#222"
                           }
-                        }}
-                      />
-                    )}
+                        }
+                      }
+                    }}
                   />
                 </label>
               </div>
