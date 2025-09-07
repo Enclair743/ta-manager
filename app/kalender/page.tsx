@@ -4,7 +4,8 @@ import TextField from "@mui/material/TextField";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { DateTimePicker } from "@mui/x-date-pickers/DateTimePicker";
-import idLocale from "date-fns/locale/id";
+// Ganti import locale
+import { id as idLocale } from "date-fns/locale";
 
 export default function KalenderPage() {
   const [events, setEvents] = useState<any[]>([]);
