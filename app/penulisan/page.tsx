@@ -8,7 +8,6 @@ type ChecklistItem = {
   id: string;
   text: string;
   checked: boolean;
-  file?: { name: string; size: number } | null;
 };
 
 const defaultPenulisan = [
@@ -127,24 +126,6 @@ export default function PenulisanPage() {
     const updated = tugasList.filter(i => i.id !== id);
     setTugasList(updated);
     await setDoc(checklistDoc, { penulisanList, tugasList: updated, onedrive, drive }, { merge: true });
-  }
-
-  // File Upload for Checklist (Penulisan & Tugas)
-  function handlePenulisanFileUpload(idx: number, e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    const updated = [...penulisanList];
-    updated[idx].file = file ? { name: file.name, size: file.size } : null;
-    if (file) updated[idx].checked = true;
-    setPenulisanList(updated);
-    setDoc(checklistDoc, { penulisanList: updated, tugasList, onedrive, drive }, { merge: true });
-  }
-  function handleTugasFileUpload(idx: number, e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    const updated = [...tugasList];
-    updated[idx].file = file ? { name: file.name, size: file.size } : null;
-    if (file) updated[idx].checked = true;
-    setTugasList(updated);
-    setDoc(checklistDoc, { penulisanList, tugasList: updated, onedrive, drive }, { merge: true });
   }
 
   // OneDrive & Drive
@@ -372,28 +353,13 @@ export default function PenulisanPage() {
               ) : (
                 <>
                   <span style={{ flex: 1, fontWeight: 500 }}>{item.text}</span>
-                  <input
-                    type="file"
-                    onChange={e => handlePenulisanFileUpload(i, e)}
-                    style={{ marginLeft: "12px" }}
-                    accept=".pdf,.doc,.docx,.jpg,.png"
-                  />
-                  {item.file ? (
-                    <span style={{ marginLeft: "8px", color: "green" }}>
-                      ✅ {item.file.name}
-                    </span>
-                  ) : (
-                    <span style={{ marginLeft: "8px", color: "red" }}>
-                      Belum upload
-                    </span>
-                  )}
                   <button onClick={() => startEditPenulisan(item)}
                     style={{
-                      background: "#6366f1", color: "#fff", border: "none", borderRadius: "6px", padding: "0.3em 0.9em", cursor: "pointer", marginLeft: "0.3em"
+                      background: "#6366f1", color: "#fff", border: "none", borderRadius: "6px", padding: "0.3em 0.9em", cursor: "pointer", marginRight: "0.3em"
                     }}>Edit</button>
                   <button onClick={() => handlePenulisanDelete(item.id)}
                     style={{
-                      background: "#ef4444", color: "#fff", border: "none", borderRadius: "6px", padding: "0.3em 0.9em", cursor: "pointer", marginLeft: "0.3em"
+                      background: "#ef4444", color: "#fff", border: "none", borderRadius: "6px", padding: "0.3em 0.9em", cursor: "pointer"
                     }}>Hapus</button>
                 </>
               )}
@@ -498,28 +464,13 @@ export default function PenulisanPage() {
               ) : (
                 <>
                   <span style={{ flex: 1, fontWeight: 500 }}>{item.text}</span>
-                  <input
-                    type="file"
-                    onChange={e => handleTugasFileUpload(i, e)}
-                    style={{ marginLeft: "12px" }}
-                    accept=".pdf,.doc,.docx,.jpg,.png"
-                  />
-                  {item.file ? (
-                    <span style={{ marginLeft: "8px", color: "green" }}>
-                      ✅ {item.file.name}
-                    </span>
-                  ) : (
-                    <span style={{ marginLeft: "8px", color: "red" }}>
-                      Belum upload
-                    </span>
-                  )}
                   <button onClick={() => startEditTugas(item)}
                     style={{
-                      background: "#6366f1", color: "#fff", border: "none", borderRadius: "6px", padding: "0.3em 0.9em", cursor: "pointer", marginLeft: "0.3em"
+                      background: "#6366f1", color: "#fff", border: "none", borderRadius: "6px", padding: "0.3em 0.9em", cursor: "pointer", marginRight: "0.3em"
                     }}>Edit</button>
                   <button onClick={() => handleTugasDelete(item.id)}
                     style={{
-                      background: "#ef4444", color: "#fff", border: "none", borderRadius: "6px", padding: "0.3em 0.9em", cursor: "pointer", marginLeft: "0.3em"
+                      background: "#ef4444", color: "#fff", border: "none", borderRadius: "6px", padding: "0.3em 0.9em", cursor: "pointer"
                     }}>Hapus</button>
                 </>
               )}
