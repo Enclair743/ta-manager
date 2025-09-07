@@ -3,11 +3,14 @@ import { useState, useEffect } from "react";
 import app from "../firebase";
 import { getFirestore, doc, getDoc, setDoc } from "firebase/firestore";
 import { v4 as uuidv4 } from "uuid";
+import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
 type ChecklistItem = {
   id: string;
   text: string;
   checked: boolean;
+  fileUrl?: string;
+  fileName?: string;
 };
 
 const defaultPenulisan = [
@@ -19,8 +22,16 @@ const defaultPenulisan = [
   { id: uuidv4(), text: "Bab 5 - Kesimpulan", checked: false },
 ];
 
+const defaultBerkas = [
+  { id: uuidv4(), text: "KTP", checked: false },
+  { id: uuidv4(), text: "KTM", checked: false },
+  { id: uuidv4(), text: "Surat Pengantar", checked: false },
+  { id: uuidv4(), text: "Proposal", checked: false },
+];
+
 export default function PenulisanPage() {
   const db = getFirestore(app);
+  const storage = getStorage(app);
   const checklistDoc = doc(db, "penulisan", "checklist");
   const [penulisanList, setPenulisanList] = useState<ChecklistItem[]>(defaultPenulisan);
   const [newPenulisan, setNewPenulisan] = useState("");
@@ -31,6 +42,14 @@ export default function PenulisanPage() {
   const [newTugas, setNewTugas] = useState("");
   const [editTugasId, setEditTugasId] = useState<string | null>(null);
   const [editTugasText, setEditTugasText] = useState("");
+
+  // Checklist Berkas
+  const [berkasList, setBerkasList] = useState<ChecklistItem[]>(defaultBerkas);
+  const [newBerkas, setNewBerkas] = useState("");
+  const [editBerkasId, setEditBerkasId] = useState<string | null>(null);
+  const [editBerkasText, setEditBerkasText] = useState("");
+  const [uploadingId, setUploadingId] = useState<string | null>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   const [onedrive, setOnedrive] = useState("");
   const [drive, setDrive] = useState("");
@@ -45,6 +64,7 @@ export default function PenulisanPage() {
         const data = snap.data();
         if (Array.isArray(data.penulisanList)) setPenulisanList(data.penulisanList);
         if (Array.isArray(data.tugasList)) setTugasList(data.tugasList);
+        if (Array.isArray(data.berkasList)) setBerkasList(data.berkasList);
         if (typeof data.onedrive === "string") setOnedrive(data.onedrive);
         if (typeof data.drive === "string") setDrive(data.drive);
       }
@@ -61,14 +81,14 @@ export default function PenulisanPage() {
     const updated = [...penulisanList];
     updated[idx].checked = !updated[idx].checked;
     setPenulisanList(updated);
-    await setDoc(checklistDoc, { penulisanList: updated, tugasList, onedrive, drive }, { merge: true });
+    await setDoc(checklistDoc, { penulisanList: updated, tugasList, berkasList, onedrive, drive }, { merge: true });
   }
   async function handlePenulisanAdd() {
     if (newPenulisan.trim()) {
       const updated = [...penulisanList, { id: uuidv4(), text: newPenulisan, checked: false }];
       setPenulisanList(updated);
       setNewPenulisan("");
-      await setDoc(checklistDoc, { penulisanList: updated, tugasList, onedrive, drive }, { merge: true });
+      await setDoc(checklistDoc, { penulisanList: updated, tugasList, berkasList, onedrive, drive }, { merge: true });
     }
   }
   function startEditPenulisan(item: ChecklistItem) {
@@ -83,13 +103,13 @@ export default function PenulisanPage() {
       setPenulisanList(updated);
       setEditPenulisanId(null);
       setEditPenulisanText("");
-      await setDoc(checklistDoc, { penulisanList: updated, tugasList, onedrive, drive }, { merge: true });
+      await setDoc(checklistDoc, { penulisanList: updated, tugasList, berkasList, onedrive, drive }, { merge: true });
     }
   }
   async function handlePenulisanDelete(id: string) {
     const updated = penulisanList.filter(i => i.id !== id);
     setPenulisanList(updated);
-    await setDoc(checklistDoc, { penulisanList: updated, tugasList, onedrive, drive }, { merge: true });
+    await setDoc(checklistDoc, { penulisanList: updated, tugasList, berkasList, onedrive, drive }, { merge: true });
   }
 
   // Checklist Tugas Actions
@@ -97,14 +117,14 @@ export default function PenulisanPage() {
     const updated = [...tugasList];
     updated[idx].checked = !updated[idx].checked;
     setTugasList(updated);
-    await setDoc(checklistDoc, { penulisanList, tugasList: updated, onedrive, drive }, { merge: true });
+    await setDoc(checklistDoc, { penulisanList, tugasList: updated, berkasList, onedrive, drive }, { merge: true });
   }
   async function handleTugasAdd() {
     if (newTugas.trim()) {
       const updated = [...tugasList, { id: uuidv4(), text: newTugas, checked: false }];
       setTugasList(updated);
       setNewTugas("");
-      await setDoc(checklistDoc, { penulisanList, tugasList: updated, onedrive, drive }, { merge: true });
+      await setDoc(checklistDoc, { penulisanList, tugasList: updated, berkasList, onedrive, drive }, { merge: true });
     }
   }
   function startEditTugas(item: ChecklistItem) {
@@ -119,23 +139,85 @@ export default function PenulisanPage() {
       setTugasList(updated);
       setEditTugasId(null);
       setEditTugasText("");
-      await setDoc(checklistDoc, { penulisanList, tugasList: updated, onedrive, drive }, { merge: true });
+      await setDoc(checklistDoc, { penulisanList, tugasList: updated, berkasList, onedrive, drive }, { merge: true });
     }
   }
   async function handleTugasDelete(id: string) {
     const updated = tugasList.filter(i => i.id !== id);
     setTugasList(updated);
-    await setDoc(checklistDoc, { penulisanList, tugasList: updated, onedrive, drive }, { merge: true });
+    await setDoc(checklistDoc, { penulisanList, tugasList: updated, berkasList, onedrive, drive }, { merge: true });
+  }
+
+  // Checklist Berkas Actions
+  async function handleBerkasCheck(idx: number) {
+    const updated = [...berkasList];
+    updated[idx].checked = !updated[idx].checked;
+    setBerkasList(updated);
+    await setDoc(checklistDoc, { penulisanList, tugasList, berkasList: updated, onedrive, drive }, { merge: true });
+  }
+  async function handleBerkasAdd() {
+    if (newBerkas.trim()) {
+      const updated = [...berkasList, { id: uuidv4(), text: newBerkas, checked: false }];
+      setBerkasList(updated);
+      setNewBerkas("");
+      await setDoc(checklistDoc, { penulisanList, tugasList, berkasList: updated, onedrive, drive }, { merge: true });
+    }
+  }
+  function startEditBerkas(item: ChecklistItem) {
+    setEditBerkasId(item.id);
+    setEditBerkasText(item.text);
+  }
+  async function handleBerkasEditSave() {
+    if (editBerkasId && editBerkasText.trim()) {
+      const updated = berkasList.map(i =>
+        i.id === editBerkasId ? { ...i, text: editBerkasText } : i
+      );
+      setBerkasList(updated);
+      setEditBerkasId(null);
+      setEditBerkasText("");
+      await setDoc(checklistDoc, { penulisanList, tugasList, berkasList: updated, onedrive, drive }, { merge: true });
+    }
+  }
+  async function handleBerkasDelete(id: string) {
+    const updated = berkasList.filter(i => i.id !== id);
+    setBerkasList(updated);
+    await setDoc(checklistDoc, { penulisanList, tugasList, berkasList: updated, onedrive, drive }, { merge: true });
+  }
+
+  // Upload Berkas (Firebase Storage)
+  async function handleBerkasUpload(id: string, file: File) {
+    setUploadingId(id);
+    setUploadError(null);
+    try {
+      const storageRef = ref(storage, `berkas_ta/${id}_${file.name}`);
+      await uploadBytes(storageRef, file);
+      const url = await getDownloadURL(storageRef);
+      const updated = berkasList.map(item =>
+        item.id === id ? { ...item, fileUrl: url, fileName: file.name } : item
+      );
+      setBerkasList(updated);
+      await setDoc(checklistDoc, { penulisanList, tugasList, berkasList: updated, onedrive, drive }, { merge: true });
+    } catch (err: any) {
+      setUploadError("Gagal upload berkas.");
+    }
+    setUploadingId(null);
+  }
+  async function handleBerkasRemoveFile(id: string) {
+    const updated = berkasList.map(item =>
+      item.id === id ? { ...item, fileUrl: undefined, fileName: undefined } : item
+    );
+    setBerkasList(updated);
+    await setDoc(checklistDoc, { penulisanList, tugasList, berkasList: updated, onedrive, drive }, { merge: true });
   }
 
   // OneDrive & Drive
   async function handleOnedriveChange(val: string) {
     setOnedrive(val);
-    await setDoc(checklistDoc, { penulisanList, tugasList, onedrive: val, drive }, { merge: true });
+    await setDoc(checklistDoc, { penulisanList, tugasList, berkasList, onedrive: val, drive }, { merge: true });
   }
   async function handleDriveChange(val: string) {
     setDrive(val);
-    await setDoc(checklistDoc, { penulisanList, tugasList, onedrive, drive: val }, { merge: true });
+    await setDoc(checklistDoc, { penulisanList, tugasList, berkasList, onedrive, drive: val }, { merge: true });
   }
   function handleCopyOneDrive() {
     if (onedrive) {
@@ -180,6 +262,7 @@ export default function PenulisanPage() {
       {/* --- LINK DOKUMEN --- */}
       <div style={{ ...cardStyle, marginBottom: 28 }}>
         <h2 style={{ marginBottom: 16, fontSize: "1.18em" }}>Dokumen Tugas Akhir</h2>
+        {/* ... (bagian link dokumen tidak berubah) ... */}
         <div style={{ marginBottom: 12 }}>
           <label style={{ fontWeight: 500, marginRight: 10 }}>Link OneDrive Dokumen TA:</label>
           <div style={{ display: "flex", alignItems: "center", gap: "0.8em", marginTop: 5 }}>
@@ -283,6 +366,179 @@ export default function PenulisanPage() {
           {showCopyDrive && (
             <span style={{ color: "#6366f1", marginLeft: 10, fontWeight: 500 }}>Link berhasil dicopy!</span>
           )}
+        </div>
+      </div>
+
+      {/* Checklist Berkas */}
+      <div style={cardStyle}>
+        <h2 style={{ marginBottom: 10 }}>Checklist Berkas</h2>
+        <ul style={{
+          listStyle: "none",
+          padding: 0,
+          marginBottom: "1em",
+          display: "grid",
+          gridTemplateColumns: "1fr 1fr",
+          gap: "1em",
+        }}>
+          {berkasList.map((item, i) => (
+            <li key={item.id} style={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "flex-start",
+              marginBottom: "0.7em",
+              background: item.checked
+                ? (theme === "dark" ? "linear-gradient(90deg,#353a47,#23272f)" : "#e0e7ff")
+                : (theme === "dark" ? "#23272f" : "#fff"),
+              borderRadius: "14px",
+              padding: "1em",
+              boxShadow: item.checked
+                ? "0 8px 32px rgba(99,102,241,0.18)"
+                : "0 4px 16px rgba(99,102,241,0.10)",
+              border: item.checked
+                ? "1.5px solid #6366f1"
+                : "1px solid #353a47",
+              color: theme === "dark" ? "#f3f4f6" : "#222",
+              transition: "box-shadow 0.2s, background 0.2s"
+            }}>
+              <div style={{ display: "flex", alignItems: "center", width: "100%" }}>
+                <input
+                  type="checkbox"
+                  checked={item.checked}
+                  onChange={() => handleBerkasCheck(i)}
+                  style={{
+                    marginRight: "1em",
+                    accentColor: "#6366f1",
+                    width: "1.2em",
+                    height: "1.2em",
+                  }}
+                />
+                {editBerkasId === item.id ? (
+                  <>
+                    <input
+                      type="text"
+                      value={editBerkasText}
+                      onChange={e => setEditBerkasText(e.target.value)}
+                      style={{
+                        flex: 1,
+                        marginRight: "0.5em",
+                        padding: "0.5em",
+                        borderRadius: "6px",
+                        border: "1px solid #6366f1"
+                      }}
+                    />
+                    <button onClick={handleBerkasEditSave}
+                      style={{
+                        background: "#6366f1", color: "#fff", border: "none", borderRadius: "6px", padding: "0.3em 0.9em", cursor: "pointer", marginRight: "0.3em"
+                      }}>Simpan</button>
+                    <button onClick={() => setEditBerkasId(null)}
+                      style={{
+                        background: "#e0e7ff", color: "#6366f1", border: "1px solid #6366f1", borderRadius: "6px", padding: "0.3em 0.9em", cursor: "pointer"
+                      }}>Batal</button>
+                  </>
+                ) : (
+                  <>
+                    <span style={{ flex: 1, fontWeight: 500 }}>{item.text}</span>
+                    <button onClick={() => startEditBerkas(item)}
+                      style={{
+                        background: "#6366f1", color: "#fff", border: "none", borderRadius: "6px", padding: "0.3em 0.9em", cursor: "pointer", marginRight: "0.3em"
+                      }}>Edit</button>
+                    <button onClick={() => handleBerkasDelete(item.id)}
+                      style={{
+                        background: "#ef4444", color: "#fff", border: "none", borderRadius: "6px", padding: "0.3em 0.9em", cursor: "pointer"
+                      }}>Hapus</button>
+                  </>
+                )}
+              </div>
+              {/* Upload opsional */}
+              <div style={{ marginTop: "0.7em", width: "100%" }}>
+                {item.fileUrl ? (
+                  <div style={{ display: "flex", alignItems: "center", gap: "1em" }}>
+                    <a href={item.fileUrl} target="_blank" rel="noopener noreferrer"
+                      style={{
+                        color: "#6366f1",
+                        fontWeight: 500,
+                        textDecoration: "underline"
+                      }}>
+                      {item.fileName || "Download Berkas"}
+                    </a>
+                    <button
+                      onClick={() => handleBerkasRemoveFile(item.id)}
+                      style={{
+                        background: "#ef4444",
+                        color: "#fff",
+                        border: "none",
+                        borderRadius: "6px",
+                        padding: "0.3em 0.9em",
+                        cursor: "pointer"
+                      }}>Hapus File</button>
+                  </div>
+                ) : (
+                  <form
+                    onSubmit={e => {
+                      e.preventDefault();
+                      const input = (e.target as HTMLFormElement).elements.namedItem("file") as HTMLInputElement;
+                      if (input?.files && input.files[0]) {
+                        handleBerkasUpload(item.id, input.files[0]);
+                      }
+                    }}
+                  >
+                    <input
+                      type="file"
+                      name="file"
+                      style={{ marginRight: "1em" }}
+                      disabled={!!uploadingId}
+                      accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.zip"
+                    />
+                    <button
+                      type="submit"
+                      disabled={!!uploadingId}
+                      style={{
+                        background: "#6366f1",
+                        color: "#fff",
+                        border: "none",
+                        borderRadius: "6px",
+                        padding: "0.3em 0.9em",
+                        cursor: "pointer"
+                      }}>
+                      {uploadingId === item.id ? "Mengunggah..." : "Upload"}
+                    </button>
+                  </form>
+                )}
+                {uploadError && uploadingId === item.id && (
+                  <span style={{ color: "#ef4444", marginLeft: 10, fontWeight: 500 }}>{uploadError}</span>
+                )}
+              </div>
+            </li>
+          ))}
+        </ul>
+        <div style={{ display: "flex", gap: "0.6em", marginTop: "0.5em" }}>
+          <input
+            type="text"
+            value={newBerkas}
+            onChange={e => setNewBerkas(e.target.value)}
+            placeholder="Tambah item berkas..."
+            style={{
+              flex: 1,
+              padding: "0.7em",
+              borderRadius: "8px",
+              border: "1.5px solid #6366f1",
+              fontSize: "1em"
+            }}
+          />
+          <button
+            onClick={handleBerkasAdd}
+            style={{
+              background: "#6366f1",
+              color: "#fff",
+              border: "none",
+              borderRadius: "8px",
+              padding: "0.7em 1.2em",
+              fontWeight: 500,
+              cursor: "pointer"
+            }}
+          >
+            +
+          </button>
         </div>
       </div>
 
