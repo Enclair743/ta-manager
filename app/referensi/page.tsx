@@ -1,19 +1,18 @@
 "use client";
 import { useState, useEffect } from "react";
 import app from "../firebase";
-import { getFirestore, collection, addDoc, getDocs } from "firebase/firestore";
+import { getFirestore, collection, addDoc, getDocs, updateDoc, deleteDoc, doc, DocumentData, QueryDocumentSnapshot } from "firebase/firestore";
+import jsPDF from "jspdf";
+import { useAuth } from "../../src/context/AuthContext";
+import { useRouter } from "next/navigation";
 
-type JenisReferensi =
-  | "Buku"
-  | "Jurnal"
-  | "Website"
-  | "Laporan"
-  | "Skripsi";
-
+type JenisReferensi = "Buku" | "Jurnal" | "Website" | "Laporan" | "Skripsi";
 type Referensi = {
+  id?: string;
   jenis: JenisReferensi;
   data: any;
-  file?: File;
+  fileName?: string;
+  fileUrl?: string;
 };
 
 const jenisList: { label: string; value: JenisReferensi }[] = [
@@ -24,20 +23,204 @@ const jenisList: { label: string; value: JenisReferensi }[] = [
   { label: "Skripsi / Tesis / Disertasi", value: "Skripsi" },
 ];
 
+function ReferensiForm({ jenis, form, setForm }: { jenis: JenisReferensi; form: any; setForm: any }) {
+  const inputStyle: React.CSSProperties = {
+    marginTop: "6px",
+    padding: "0.5em 1em",
+    borderRadius: "6px",
+    border: "1px solid #353a47",
+    background: "#fff",
+    color: "#222",
+    boxSizing: "border-box",
+    width: "100%",
+    fontSize: "1em",
+  };
+  const fieldStyle: React.CSSProperties = {
+    display: "flex",
+    flexDirection: "column",
+    marginBottom: "1.1em",
+  };
+
+  if (jenis === "Buku") return (
+    <>
+      <div style={fieldStyle}>
+        <label>Nama penulis (nama belakang, inisial):</label>
+        <input type="text" value={form.penulis || ""} onChange={e => setForm({ ...form, penulis: e.target.value })} required style={inputStyle} />
+      </div>
+      <div style={fieldStyle}>
+        <label>Tahun terbit:</label>
+        <input type="text" value={form.tahun || ""} onChange={e => setForm({ ...form, tahun: e.target.value })} required style={inputStyle} />
+      </div>
+      <div style={fieldStyle}>
+        <label>Judul buku <span style={{ fontStyle: "italic" }}>(italic)</span>:</label>
+        <input type="text" value={form.judul || ""} onChange={e => setForm({ ...form, judul: e.target.value })} required style={inputStyle} />
+      </div>
+      <div style={fieldStyle}>
+        <label>Edisi (opsional):</label>
+        <input type="text" value={form.edisi || ""} onChange={e => setForm({ ...form, edisi: e.target.value })} style={inputStyle} />
+      </div>
+      <div style={fieldStyle}>
+        <label>Kota penerbit:</label>
+        <input type="text" value={form.kota || ""} onChange={e => setForm({ ...form, kota: e.target.value })} required style={inputStyle} />
+      </div>
+      <div style={fieldStyle}>
+        <label>Nama penerbit:</label>
+        <input type="text" value={form.penerbit || ""} onChange={e => setForm({ ...form, penerbit: e.target.value })} required style={inputStyle} />
+      </div>
+    </>
+  );
+  if (jenis === "Jurnal") return (
+    <>
+      <div style={fieldStyle}>
+        <label>Nama penulis:</label>
+        <input type="text" value={form.penulis || ""} onChange={e => setForm({ ...form, penulis: e.target.value })} required style={inputStyle} />
+      </div>
+      <div style={fieldStyle}>
+        <label>Tahun terbit:</label>
+        <input type="text" value={form.tahun || ""} onChange={e => setForm({ ...form, tahun: e.target.value })} required style={inputStyle} />
+      </div>
+      <div style={fieldStyle}>
+        <label>Judul artikel:</label>
+        <input type="text" value={form.judul || ""} onChange={e => setForm({ ...form, judul: e.target.value })} required style={inputStyle} />
+      </div>
+      <div style={fieldStyle}>
+        <label>Nama jurnal <span style={{ fontStyle: "italic" }}>(italic)</span>:</label>
+        <input type="text" value={form.jurnal || ""} onChange={e => setForm({ ...form, jurnal: e.target.value })} required style={inputStyle} />
+      </div>
+      <div style={fieldStyle}>
+        <label>Volume (nomor):</label>
+        <input type="text" value={form.volume || ""} onChange={e => setForm({ ...form, volume: e.target.value })} style={inputStyle} />
+      </div>
+      <div style={fieldStyle}>
+        <label>Halaman:</label>
+        <input type="text" value={form.halaman || ""} onChange={e => setForm({ ...form, halaman: e.target.value })} style={inputStyle} />
+      </div>
+      <div style={fieldStyle}>
+        <label>DOI (opsional):</label>
+        <input type="text" value={form.doi || ""} onChange={e => setForm({ ...form, doi: e.target.value })} style={inputStyle} />
+      </div>
+    </>
+  );
+  if (jenis === "Website") return (
+    <>
+      <div style={fieldStyle}>
+        <label>Nama penulis / organisasi:</label>
+        <input type="text" value={form.penulis || ""} onChange={e => setForm({ ...form, penulis: e.target.value })} required style={inputStyle} />
+      </div>
+      <div style={fieldStyle}>
+        <label>Tahun / tanggal update:</label>
+        <input type="text" value={form.tahun || ""} onChange={e => setForm({ ...form, tahun: e.target.value })} required style={inputStyle} />
+      </div>
+      <div style={fieldStyle}>
+        <label>Judul halaman / artikel:</label>
+        <input type="text" value={form.judul || ""} onChange={e => setForm({ ...form, judul: e.target.value })} required style={inputStyle} />
+      </div>
+      <div style={fieldStyle}>
+        <label>Nama situs:</label>
+        <input type="text" value={form.situs || ""} onChange={e => setForm({ ...form, situs: e.target.value })} required style={inputStyle} />
+      </div>
+      <div style={fieldStyle}>
+        <label>URL:</label>
+        <input type="text" value={form.url || ""} onChange={e => setForm({ ...form, url: e.target.value })} required style={inputStyle} />
+      </div>
+      <div style={fieldStyle}>
+        <label>Tanggal akses (opsional):</label>
+        <input type="text" value={form.akses || ""} onChange={e => setForm({ ...form, akses: e.target.value })} style={inputStyle} />
+      </div>
+    </>
+  );
+  if (jenis === "Laporan") return (
+    <>
+      <div style={fieldStyle}>
+        <label>Nama lembaga/penulis:</label>
+        <input type="text" value={form.penulis || ""} onChange={e => setForm({ ...form, penulis: e.target.value })} required style={inputStyle} />
+      </div>
+      <div style={fieldStyle}>
+        <label>Tahun:</label>
+        <input type="text" value={form.tahun || ""} onChange={e => setForm({ ...form, tahun: e.target.value })} required style={inputStyle} />
+      </div>
+      <div style={fieldStyle}>
+        <label>Judul laporan <span style={{ fontStyle: "italic" }}>(italic)</span>:</label>
+        <input type="text" value={form.judul || ""} onChange={e => setForm({ ...form, judul: e.target.value })} required style={inputStyle} />
+      </div>
+      <div style={fieldStyle}>
+        <label>Nomor laporan (opsional):</label>
+        <input type="text" value={form.nomor || ""} onChange={e => setForm({ ...form, nomor: e.target.value })} style={inputStyle} />
+      </div>
+      <div style={fieldStyle}>
+        <label>Penerbit:</label>
+        <input type="text" value={form.penerbit || ""} onChange={e => setForm({ ...form, penerbit: e.target.value })} required style={inputStyle} />
+      </div>
+      <div style={fieldStyle}>
+        <label>URL (opsional):</label>
+        <input type="text" value={form.url || ""} onChange={e => setForm({ ...form, url: e.target.value })} style={inputStyle} />
+      </div>
+    </>
+  );
+  if (jenis === "Skripsi") return (
+    <>
+      <div style={fieldStyle}>
+        <label>Nama penulis:</label>
+        <input type="text" value={form.penulis || ""} onChange={e => setForm({ ...form, penulis: e.target.value })} required style={inputStyle} />
+      </div>
+      <div style={fieldStyle}>
+        <label>Tahun:</label>
+        <input type="text" value={form.tahun || ""} onChange={e => setForm({ ...form, tahun: e.target.value })} required style={inputStyle} />
+      </div>
+      <div style={fieldStyle}>
+        <label>Judul skripsi/tesis/disertasi <span style={{ fontStyle: "italic" }}>(italic)</span>:</label>
+        <input type="text" value={form.judul || ""} onChange={e => setForm({ ...form, judul: e.target.value })} required style={inputStyle} />
+      </div>
+      <div style={fieldStyle}>
+        <label>Jenis karya:</label>
+        <select value={form.jenisKarya || "Skripsi"} onChange={e => setForm({ ...form, jenisKarya: e.target.value })} style={inputStyle}>
+          <option value="Skripsi">Skripsi</option>
+          <option value="Tesis">Tesis</option>
+          <option value="Disertasi">Disertasi</option>
+        </select>
+      </div>
+      <div style={fieldStyle}>
+        <label>Nama universitas:</label>
+        <input type="text" value={form.universitas || ""} onChange={e => setForm({ ...form, universitas: e.target.value })} required style={inputStyle} />
+      </div>
+      <div style={fieldStyle}>
+        <label>URL (opsional):</label>
+        <input type="text" value={form.url || ""} onChange={e => setForm({ ...form, url: e.target.value })} style={inputStyle} />
+      </div>
+    </>
+  );
+  return null;
+}
+
 export default function ReferensiPage() {
   const [referensiList, setReferensiList] = useState<Referensi[]>([]);
   const [jenis, setJenis] = useState<JenisReferensi>("Buku");
   const [form, setForm] = useState<any>({});
   const [file, setFile] = useState<File | undefined>(undefined);
   const [theme, setTheme] = useState<"dark" | "light">("dark");
+  const [filter, setFilter] = useState("");
+  const [sortBy, setSortBy] = useState<"tahun" | "jenis" | "penulis">("tahun");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
+  const [editIdx, setEditIdx] = useState<number | null>(null);
+  const [previewFileUrl, setPreviewFileUrl] = useState<string | null>(null);
+  const [showModal, setShowModal] = useState(false);
+  const { user, loading } = useAuth();
+  const router = useRouter();
   const db = getFirestore(app);
+
+  useEffect(() => {
+    if (!loading && !user) {
+      router.push("/login");
+    }
+  }, [user, loading, router]);
 
   useEffect(() => {
     async function fetchReferensi() {
       const snapshot = await getDocs(collection(db, "referensi"));
-      setReferensiList(
-        snapshot.docs.map(doc => doc.data() as Referensi)
-      );
+      setReferensiList(snapshot.docs.map((doc: QueryDocumentSnapshot<DocumentData>) => ({
+        id: doc.id,
+        ...doc.data()
+      } as Referensi)));
     }
     fetchReferensi();
   }, []);
@@ -48,375 +231,97 @@ export default function ReferensiPage() {
     }
   }, []);
 
+  let filtered = referensiList
+    .filter(ref =>
+      (ref.data.penulis?.toLowerCase() ?? "").includes(filter.toLowerCase()) ||
+      (ref.data.judul?.toLowerCase() ?? "").includes(filter.toLowerCase()) ||
+      (ref.jenis?.toLowerCase() ?? "").includes(filter.toLowerCase())
+    )
+    .sort((a, b) => {
+      let aVal, bVal;
+      if (sortBy === "tahun") {
+        aVal = a.data.tahun ?? "";
+        bVal = b.data.tahun ?? "";
+      } else if (sortBy === "penulis") {
+        aVal = a.data.penulis ?? "";
+        bVal = b.data.penulis ?? "";
+      } else {
+        aVal = a.jenis ?? "";
+        bVal = b.jenis ?? "";
+      }
+      return sortOrder === "asc"
+        ? String(aVal).localeCompare(String(bVal))
+        : String(bVal).localeCompare(String(aVal));
+    });
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    const newRef: Referensi = { jenis, data: form, file };
-    setReferensiList([...referensiList, newRef]);
-    await addDoc(collection(db, "referensi"), {
-      jenis,
-      data: form,
-      // file: file ? file.name : null // file upload ke Storage, bukan Firestore
-    });
+    let fileUrl: string | undefined = undefined;
+    let fileName: string | undefined = undefined;
+    if (file) {
+      fileUrl = URL.createObjectURL(file);
+      fileName = file.name;
+    }
+    if (editIdx !== null && filtered[editIdx]?.id) {
+      await updateDoc(doc(db, "referensi", filtered[editIdx].id!), {
+        jenis, data: form, fileUrl, fileName
+      });
+      setReferensiList(referensiList.map((r, i) =>
+        i === editIdx ? { ...r, jenis, data: form, fileUrl, fileName } : r
+      ));
+    } else {
+      const ref = await addDoc(collection(db, "referensi"), {
+        jenis, data: form, fileUrl, fileName
+      });
+      setReferensiList([...referensiList, { id: ref.id, jenis, data: form, fileUrl, fileName }]);
+    }
     resetForm();
+    setShowModal(false);
+  }
+
+  function handleEdit(idx: number) {
+    setJenis(filtered[idx].jenis);
+    setForm(filtered[idx].data);
+    setFile(undefined);
+    setEditIdx(idx);
+    setShowModal(true);
+  }
+
+  async function handleDelete(idx: number) {
+    if (!confirm("Yakin ingin menghapus referensi ini?")) return;
+    const id = filtered[idx].id;
+    if (id) {
+      await deleteDoc(doc(db, "referensi", id));
+      setReferensiList(referensiList.filter(r => r.id !== id));
+    }
   }
 
   function resetForm() {
+    setJenis("Buku");
     setForm({});
     setFile(undefined);
-    setJenis("Buku");
+    setEditIdx(null);
   }
 
-  function renderForm() {
-    const inputStyle: React.CSSProperties = {
-      marginTop: "6px",
-      padding: "0.5em 1em",
-      borderRadius: "6px",
-      border: "1px solid #353a47",
-      background: theme === "dark" ? "#353a47" : "#fff",
-      color: theme === "dark" ? "#f3f4f6" : "#222",
-      boxSizing: "border-box",
-      width: "100%",
-      fontSize: "1em"
-    };
-    const fieldStyle: React.CSSProperties = {
-      display: "flex",
-      flexDirection: "column",
-      marginBottom: "1.1em"
-    };
+  function handlePreviewFile(url: string) {
+    setPreviewFileUrl(url);
+  }
 
-    switch (jenis) {
-      case "Buku":
-        return (
-          <>
-            <div style={fieldStyle}>
-              <label>Nama penulis:</label>
-              <input
-                type="text"
-                value={form.penulis || ""}
-                onChange={e => setForm({ ...form, penulis: e.target.value })}
-                required
-                style={inputStyle}
-              />
-            </div>
-            <div style={fieldStyle}>
-              <label>Tahun terbit:</label>
-              <input
-                type="text"
-                value={form.tahun || ""}
-                onChange={e => setForm({ ...form, tahun: e.target.value })}
-                required
-                style={inputStyle}
-              />
-            </div>
-            <div style={fieldStyle}>
-              <label>Judul buku:</label>
-              <input
-                type="text"
-                value={form.judul || ""}
-                onChange={e => setForm({ ...form, judul: e.target.value })}
-                required
-                style={inputStyle}
-              />
-            </div>
-            <div style={fieldStyle}>
-              <label>Edisi (opsional):</label>
-              <input
-                type="text"
-                value={form.edisi || ""}
-                onChange={e => setForm({ ...form, edisi: e.target.value })}
-                style={inputStyle}
-              />
-            </div>
-            <div style={fieldStyle}>
-              <label>Kota penerbit:</label>
-              <input
-                type="text"
-                value={form.kota || ""}
-                onChange={e => setForm({ ...form, kota: e.target.value })}
-                required
-                style={inputStyle}
-              />
-            </div>
-            <div style={fieldStyle}>
-              <label>Nama penerbit:</label>
-              <input
-                type="text"
-                value={form.penerbit || ""}
-                onChange={e => setForm({ ...form, penerbit: e.target.value })}
-                required
-                style={inputStyle}
-              />
-            </div>
-          </>
-        );
-      case "Jurnal":
-        return (
-          <>
-            <div style={fieldStyle}>
-              <label>Nama penulis:</label>
-              <input
-                type="text"
-                value={form.penulis || ""}
-                onChange={e => setForm({ ...form, penulis: e.target.value })}
-                required
-                style={inputStyle}
-              />
-            </div>
-            <div style={fieldStyle}>
-              <label>Tahun terbit:</label>
-              <input
-                type="text"
-                value={form.tahun || ""}
-                onChange={e => setForm({ ...form, tahun: e.target.value })}
-                required
-                style={inputStyle}
-              />
-            </div>
-            <div style={fieldStyle}>
-              <label>Judul artikel:</label>
-              <input
-                type="text"
-                value={form.judul || ""}
-                onChange={e => setForm({ ...form, judul: e.target.value })}
-                required
-                style={inputStyle}
-              />
-            </div>
-            <div style={fieldStyle}>
-              <label>Nama jurnal:</label>
-              <input
-                type="text"
-                value={form.jurnal || ""}
-                onChange={e => setForm({ ...form, jurnal: e.target.value })}
-                required
-                style={inputStyle}
-              />
-            </div>
-            <div style={fieldStyle}>
-              <label>Volume (nomor):</label>
-              <input
-                type="text"
-                value={form.volume || ""}
-                onChange={e => setForm({ ...form, volume: e.target.value })}
-                style={inputStyle}
-              />
-            </div>
-            <div style={fieldStyle}>
-              <label>Halaman:</label>
-              <input
-                type="text"
-                value={form.halaman || ""}
-                onChange={e => setForm({ ...form, halaman: e.target.value })}
-                style={inputStyle}
-              />
-            </div>
-            <div style={fieldStyle}>
-              <label>DOI (opsional):</label>
-              <input
-                type="text"
-                value={form.doi || ""}
-                onChange={e => setForm({ ...form, doi: e.target.value })}
-                style={inputStyle}
-              />
-            </div>
-          </>
-        );
-      case "Website":
-        return (
-          <>
-            <div style={fieldStyle}>
-              <label>Nama penulis / organisasi:</label>
-              <input
-                type="text"
-                value={form.penulis || ""}
-                onChange={e => setForm({ ...form, penulis: e.target.value })}
-                required
-                style={inputStyle}
-              />
-            </div>
-            <div style={fieldStyle}>
-              <label>Tahun / tanggal update:</label>
-              <input
-                type="text"
-                value={form.tahun || ""}
-                onChange={e => setForm({ ...form, tahun: e.target.value })}
-                required
-                style={inputStyle}
-              />
-            </div>
-            <div style={fieldStyle}>
-              <label>Judul halaman / artikel:</label>
-              <input
-                type="text"
-                value={form.judul || ""}
-                onChange={e => setForm({ ...form, judul: e.target.value })}
-                required
-                style={inputStyle}
-              />
-            </div>
-            <div style={fieldStyle}>
-              <label>Nama situs:</label>
-              <input
-                type="text"
-                value={form.situs || ""}
-                onChange={e => setForm({ ...form, situs: e.target.value })}
-                required
-                style={inputStyle}
-              />
-            </div>
-            <div style={fieldStyle}>
-              <label>URL:</label>
-              <input
-                type="text"
-                value={form.url || ""}
-                onChange={e => setForm({ ...form, url: e.target.value })}
-                required
-                style={inputStyle}
-              />
-            </div>
-            <div style={fieldStyle}>
-              <label>Tanggal akses (opsional):</label>
-              <input
-                type="text"
-                value={form.akses || ""}
-                onChange={e => setForm({ ...form, akses: e.target.value })}
-                style={inputStyle}
-              />
-            </div>
-          </>
-        );
-      case "Laporan":
-        return (
-          <>
-            <div style={fieldStyle}>
-              <label>Nama lembaga/penulis:</label>
-              <input
-                type="text"
-                value={form.penulis || ""}
-                onChange={e => setForm({ ...form, penulis: e.target.value })}
-                required
-                style={inputStyle}
-              />
-            </div>
-            <div style={fieldStyle}>
-              <label>Tahun:</label>
-              <input
-                type="text"
-                value={form.tahun || ""}
-                onChange={e => setForm({ ...form, tahun: e.target.value })}
-                required
-                style={inputStyle}
-              />
-            </div>
-            <div style={fieldStyle}>
-              <label>Judul laporan:</label>
-              <input
-                type="text"
-                value={form.judul || ""}
-                onChange={e => setForm({ ...form, judul: e.target.value })}
-                required
-                style={inputStyle}
-              />
-            </div>
-            <div style={fieldStyle}>
-              <label>Nomor laporan (opsional):</label>
-              <input
-                type="text"
-                value={form.nomor || ""}
-                onChange={e => setForm({ ...form, nomor: e.target.value })}
-                style={inputStyle}
-              />
-            </div>
-            <div style={fieldStyle}>
-              <label>Penerbit:</label>
-              <input
-                type="text"
-                value={form.penerbit || ""}
-                onChange={e => setForm({ ...form, penerbit: e.target.value })}
-                required
-                style={inputStyle}
-              />
-            </div>
-            <div style={fieldStyle}>
-              <label>URL (opsional):</label>
-              <input
-                type="text"
-                value={form.url || ""}
-                onChange={e => setForm({ ...form, url: e.target.value })}
-                style={inputStyle}
-              />
-            </div>
-          </>
-        );
-      case "Skripsi":
-        return (
-          <>
-            <div style={fieldStyle}>
-              <label>Nama penulis:</label>
-              <input
-                type="text"
-                value={form.penulis || ""}
-                onChange={e => setForm({ ...form, penulis: e.target.value })}
-                required
-                style={inputStyle}
-              />
-            </div>
-            <div style={fieldStyle}>
-              <label>Tahun:</label>
-              <input
-                type="text"
-                value={form.tahun || ""}
-                onChange={e => setForm({ ...form, tahun: e.target.value })}
-                required
-                style={inputStyle}
-              />
-            </div>
-            <div style={fieldStyle}>
-              <label>Judul skripsi/tesis/disertasi:</label>
-              <input
-                type="text"
-                value={form.judul || ""}
-                onChange={e => setForm({ ...form, judul: e.target.value })}
-                required
-                style={inputStyle}
-              />
-            </div>
-            <div style={fieldStyle}>
-              <label>Jenis karya:</label>
-              <select
-                value={form.jenisKarya || "Skripsi"}
-                onChange={e => setForm({ ...form, jenisKarya: e.target.value })}
-                style={inputStyle}
-              >
-                <option value="Skripsi">Skripsi</option>
-                <option value="Tesis">Tesis</option>
-                <option value="Disertasi">Disertasi</option>
-              </select>
-            </div>
-            <div style={fieldStyle}>
-              <label>Nama universitas:</label>
-              <input
-                type="text"
-                value={form.universitas || ""}
-                onChange={e => setForm({ ...form, universitas: e.target.value })}
-                required
-                style={inputStyle}
-              />
-            </div>
-            <div style={fieldStyle}>
-              <label>URL (opsional):</label>
-              <input
-                type="text"
-                value={form.url || ""}
-                onChange={e => setForm({ ...form, url: e.target.value })}
-                style={inputStyle}
-              />
-            </div>
-          </>
-        );
-      default:
-        return null;
-    }
+  function handleExportPDF() {
+    const docPDF = new jsPDF();
+    docPDF.setFontSize(14);
+    docPDF.text("Daftar Pustaka", 15, 20);
+    docPDF.setFontSize(11);
+    let y = 30;
+    filtered.forEach((ref, i) => {
+      docPDF.text(`${i + 1}. ${formatDaftarPustaka(ref)}`, 15, y, { maxWidth: 175 });
+      y += 10;
+      if (y > 250) {
+        docPDF.addPage();
+        y = 20;
+      }
+    });
+    docPDF.save("daftar_pustaka.pdf");
   }
 
   function formatDaftarPustaka(ref: Referensi) {
@@ -437,6 +342,8 @@ export default function ReferensiPage() {
     }
   }
 
+  if (loading || !user) return <div>Loading...</div>;
+
   return (
     <div>
       <h1 style={{
@@ -444,66 +351,44 @@ export default function ReferensiPage() {
         marginBottom: "1em",
         color: theme === "dark" ? "#f3f4f6" : "#222"
       }}>Referensi</h1>
-      <form
-        onSubmit={handleSubmit}
-        style={{
-          border: "none",
-          padding: "2.2rem",
-          marginBottom: "2rem",
-          background: theme === "dark" ? "#23272f" : "#fff",
-          borderRadius: "18px",
-          boxShadow: theme === "dark"
-            ? "0 8px 32px rgba(99,102,241,0.18)"
-            : "0 8px 32px rgba(99,102,241,0.10)",
-          color: theme === "dark" ? "#f3f4f6" : "#222"
-        }}
-      >
-        <div style={{ marginBottom: "1em" }}>
-          <label>
-            <b>Upload file:</b>
-            <input
-              type="file"
-              onChange={e => setFile(e.target.files?.[0])}
-              style={{
-                marginLeft: "8px",
-                padding: "0.5em",
-                borderRadius: "6px",
-                border: "1px solid #353a47",
-                background: theme === "dark" ? "#353a47" : "#fff",
-                color: theme === "dark" ? "#f3f4f6" : "#222"
-              }}
-            />
-          </label>
-        </div>
-        <div style={{ marginBottom: "1em" }}>
-          <label>
-            <b>Jenis referensi:</b>
-            <select
-              value={jenis}
-              onChange={e => { setJenis(e.target.value as JenisReferensi); setForm({}); }}
-              style={{
-                marginLeft: "8px",
-                padding: "0.5em 1em",
-                borderRadius: "6px",
-                border: "1px solid #353a47",
-                background: theme === "dark" ? "#353a47" : "#fff",
-                color: theme === "dark" ? "#f3f4f6" : "#222",
-                boxSizing: "border-box"
-              }}
-            >
-              {jenisList.map(j => (
-                <option key={j.value} value={j.value}>{j.label}</option>
-              ))}
-            </select>
-          </label>
-        </div>
-        <div style={{ marginBottom: "1em" }}>
-          {renderForm()}
-        </div>
-        <button
-          type="submit"
+      <div style={{
+        display: "flex", gap: "1em", marginBottom: "1.2em", alignItems: "center"
+      }}>
+        <input
+          type="text"
+          value={filter}
+          onChange={e => setFilter(e.target.value)}
+          placeholder="Cari judul/penulis/jenis..."
           style={{
-            background: "#0070f3",
+            padding: "0.7em",
+            borderRadius: "8px",
+            border: "1.5px solid #6366f1",
+            fontSize: "1em",
+            width: 220,
+            background: theme === "dark" ? "#23272f" : "#fff",
+            color: theme === "dark" ? "#f3f4f6" : "#222"
+          }}
+        />
+        <select
+          value={sortBy}
+          onChange={e => setSortBy(e.target.value as any)}
+          style={{
+            padding: "0.7em",
+            borderRadius: "8px",
+            border: "1.5px solid #6366f1",
+            fontSize: "1em",
+            background: theme === "dark" ? "#23272f" : "#fff",
+            color: theme === "dark" ? "#f3f4f6" : "#222"
+          }}
+        >
+          <option value="tahun">Sort: Tahun</option>
+          <option value="jenis">Sort: Jenis</option>
+          <option value="penulis">Sort: Penulis</option>
+        </select>
+        <button
+          onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}
+          style={{
+            background: "#6366f1",
             color: "#fff",
             border: "none",
             borderRadius: "8px",
@@ -512,9 +397,192 @@ export default function ReferensiPage() {
             cursor: "pointer"
           }}
         >
-          Simpan Referensi
+          {sortOrder === "asc" ? "Naik" : "Turun"}
         </button>
-      </form>
+        <button
+          onClick={() => { setShowModal(true); resetForm(); }}
+          style={{
+            background: theme === "dark" ? "linear-gradient(90deg,#6366f1,#60a5fa)" : "linear-gradient(90deg,#e0e7ff,#a5b4fc)",
+            color: theme === "dark" ? "#fff" : "#222",
+            border: "none",
+            borderRadius: "12px",
+            padding: "0.7em 1.2em",
+            fontWeight: 600,
+            cursor: "pointer",
+            boxShadow: theme === "dark"
+              ? "0 4px 16px rgba(99,102,241,0.18)"
+              : "0 4px 16px rgba(99,102,241,0.10)",
+            fontSize: "1.08em"
+          }}
+        >
+          + Referensi Baru
+        </button>
+        <button
+          onClick={handleExportPDF}
+          style={{
+            background: "#f59e42",
+            color: "#fff",
+            border: "none",
+            borderRadius: "8px",
+            padding: "0.7em 1.2em",
+            fontWeight: 500,
+            cursor: "pointer"
+          }}
+        >
+          Export PDF
+        </button>
+      </div>
+
+      {/* Modal Tambah/Edit Referensi */}
+      {showModal && (
+        <div style={{
+          position: "fixed",
+          top: 0, left: 0, right: 0, bottom: 0,
+          background: "rgba(0,0,0,0.3)",
+          zIndex: 10,
+          overflowY: "auto" // agar modal bisa discroll
+        }}
+          onClick={() => setShowModal(false)}
+        >
+          <div
+            style={{
+              position: "relative",
+              maxWidth: 600,
+              margin: "3rem auto",
+              background: theme === "dark" ? "#23272f" : "#fff",
+              borderRadius: "18px",
+              padding: "2rem",
+              boxShadow: "0 8px 32px rgba(99,102,241,0.18)",
+              color: theme === "dark" ? "#f3f4f6" : "#222",
+              overflowY: "auto", // agar isi modal bisa discroll
+              maxHeight: "90vh", // modal tidak keluar layar
+            }}
+            onClick={e => e.stopPropagation()}
+          >
+            <form onSubmit={handleSubmit}>
+              <div style={{ marginBottom: "1em" }}>
+                <label>
+                  <b>Upload file (PDF):</b>
+                  <input
+                    type="file"
+                    accept="application/pdf"
+                    onChange={e => setFile(e.target.files?.[0])}
+                    style={{
+                      marginLeft: "8px",
+                      padding: "0.5em",
+                      borderRadius: "6px",
+                      border: "1px solid #353a47",
+                      background: theme === "dark" ? "#353a47" : "#fff",
+                      color: theme === "dark" ? "#f3f4f6" : "#222"
+                    }}
+                  />
+                </label>
+              </div>
+              <div style={{ marginBottom: "1em" }}>
+                <label>
+                  <b>Jenis referensi:</b>
+                  <select
+                    value={jenis}
+                    onChange={e => { setJenis(e.target.value as JenisReferensi); setForm({}); }}
+                    style={{
+                      marginLeft: "8px",
+                      padding: "0.5em 1em",
+                      borderRadius: "6px",
+                      border: "1px solid #353a47",
+                      background: theme === "dark" ? "#353a47" : "#fff",
+                      color: theme === "dark" ? "#f3f4f6" : "#222",
+                      boxSizing: "border-box"
+                    }}
+                  >
+                    {jenisList.map(j => (
+                      <option key={j.value} value={j.value}>{j.label}</option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+              <div style={{ marginBottom: "1em" }}>
+                <ReferensiForm jenis={jenis} form={form} setForm={setForm} />
+              </div>
+              <button
+                type="submit"
+                style={{
+                  background: "#0070f3",
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: "8px",
+                  padding: "0.7em 1.2em",
+                  fontWeight: 500,
+                  cursor: "pointer"
+                }}
+              >
+                {editIdx !== null ? "Update" : "Simpan"}
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowModal(false)}
+                style={{
+                  marginLeft: "8px",
+                  background: theme === "dark" ? "#353a47" : "#e0e7ff",
+                  color: theme === "dark" ? "#f3f4f6" : "#6366f1",
+                  border: "none",
+                  borderRadius: "8px",
+                  padding: "0.7em 1.2em",
+                  fontWeight: 500,
+                  cursor: "pointer"
+                }}
+              >
+                Batal
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Preview File PDF */}
+      {previewFileUrl && (
+        <div style={{
+          position: "fixed",
+          top: 0, left: 0, right: 0, bottom: 0,
+          background: "rgba(0,0,0,0.3)",
+          zIndex: 11
+        }}
+          onClick={() => setPreviewFileUrl(null)}
+        >
+          <div style={{
+            position: "relative",
+            maxWidth: "80vw",
+            height: "80vh",
+            margin: "3rem auto",
+            background: "#fff",
+            borderRadius: "18px",
+            padding: "1rem",
+            boxShadow: "0 8px 32px rgba(99,102,241,0.18)",
+            overflow: "hidden"
+          }}
+            onClick={e => e.stopPropagation()}>
+            <iframe
+              src={previewFileUrl}
+              style={{ width: "100%", height: "100%", border: "none" }}
+            />
+            <button
+              style={{
+                position: "absolute",
+                top: "1rem",
+                right: "1rem",
+                background: "#0070f3",
+                color: "#fff",
+                border: "none",
+                borderRadius: "8px",
+                padding: "0.5em 1em",
+                fontWeight: 500,
+                cursor: "pointer"
+              }}
+              onClick={() => setPreviewFileUrl(null)}
+            >Tutup</button>
+          </div>
+        </div>
+      )}
+
       <h2 style={{
         marginBottom: "1em",
         color: theme === "dark" ? "#f3f4f6" : "#222"
@@ -525,8 +593,8 @@ export default function ReferensiPage() {
         padding: 0,
         margin: 0
       }}>
-        {referensiList.map((ref, i) => (
-          <li key={i} style={{
+        {filtered.map((ref, i) => (
+          <li key={ref.id || i} style={{
             marginBottom: "1em",
             background: theme === "dark" ? "#23272f" : "#fff",
             borderRadius: "18px",
@@ -540,17 +608,72 @@ export default function ReferensiPage() {
             border: "1px solid " + (theme === "dark" ? "#353a47" : "#e0e7ff"),
             transition: "box-shadow 0.2s, background 0.2s, transform 0.2s"
           }}>
-            <div>
+            <div style={{ marginBottom: "6px", display: "flex", alignItems: "center", gap: "1em" }}>
+              <span style={{
+                background: "#6366f1",
+                color: "#fff",
+                borderRadius: "8px",
+                padding: "2px 12px",
+                fontSize: "0.9em",
+                fontWeight: 600
+              }}>{ref.jenis}</span>
+              <span style={{
+                color: "#60a5fa",
+                fontSize: "0.9em"
+              }}>{ref.data.tahun}</span>
+            </div>
+            <div style={{ marginBottom: "8px" }}>
               {formatDaftarPustaka(ref)}
-              {ref.file && (
+              {ref.fileUrl && (
                 <span>
                   {" "}
-                  | <a href={URL.createObjectURL(ref.file)} download={ref.file.name}
+                  | <a href={ref.fileUrl} download={ref.fileName}
                     style={{ color: "#6366f1", textDecoration: "underline", fontWeight: 600 }}>
                     Download file
                   </a>
+                  <button
+                    style={{
+                      marginLeft: "8px",
+                      background: "#e0e7ff",
+                      color: "#6366f1",
+                      border: "none",
+                      borderRadius: "8px",
+                      padding: "0.3em 0.8em",
+                      fontWeight: 500,
+                      cursor: "pointer"
+                    }}
+                    onClick={() => handlePreviewFile(ref.fileUrl!)}
+                  >
+                    Preview PDF
+                  </button>
                 </span>
               )}
+            </div>
+            <div style={{ display: "flex", gap: "1em" }}>
+              <button
+                onClick={() => handleEdit(i)}
+                style={{
+                  background: "#6366f1",
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: "8px",
+                  padding: "0.5em 1em",
+                  fontWeight: 500,
+                  cursor: "pointer"
+                }}
+              >Edit</button>
+              <button
+                onClick={() => handleDelete(i)}
+                style={{
+                  background: "#ef4444",
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: "8px",
+                  padding: "0.5em 1em",
+                  fontWeight: 500,
+                  cursor: "pointer"
+                }}
+              >Hapus</button>
             </div>
           </li>
         ))}

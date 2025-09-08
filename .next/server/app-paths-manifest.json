@@ -1,4 +1,9 @@
 {
+  "/page": "app/page.js",
   "/dashboard/page": "app/dashboard/page.js",
-  "/penulisan/page": "app/penulisan/page.js"
+  "/login/page": "app/login/page.js",
+  "/penulisan/page": "app/penulisan/page.js",
+  "/kalender/page": "app/kalender/page.js",
+  "/referensi/page": "app/referensi/page.js",
+  "/catatan/page": "app/catatan/page.js"
 }

@@ -11,10 +11,12 @@ import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { DateTimePicker } from "@mui/x-date-pickers/DateTimePicker";
 import { id as idLocale } from "date-fns/locale";
+import { useAuth } from "../../src/context/AuthContext";
+import { useRouter } from "next/navigation";
 
 export default function KalenderPage() {
   const [events, setEvents] = useState<any[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [eventsLoading, setEventsLoading] = useState(false);
   const [form, setForm] = useState({
     summary: "",
     start: new Date(),
@@ -28,6 +30,8 @@ export default function KalenderPage() {
   const [theme, setTheme] = useState<"dark" | "light">("dark");
   const tokenClientRef = useRef<any>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const { user, loading } = useAuth();
+  const router = useRouter();
 
   // Load GIS script only once
   useEffect(() => {
@@ -125,7 +129,7 @@ export default function KalenderPage() {
   // --- MODIFIKASI fetchEvents agar ambil event dari hari ini ke depan ---
   async function fetchEvents() {
     if (!accessToken) return;
-    setLoading(true);
+    setEventsLoading(true);
     try {
       const now = new Date();
       const timeMin = encodeURIComponent(now.toISOString()); // ambil dari sekarang
@@ -142,7 +146,7 @@ export default function KalenderPage() {
         setAccessToken(null);
         setEvents([]);
         setUserEmail(null);
-        setLoading(false);
+        setEventsLoading(false);
         return;
       }
       const data = await res.json();
@@ -150,7 +154,7 @@ export default function KalenderPage() {
     } catch (err) {
       alert("Gagal mengambil event kalender");
     }
-    setLoading(false);
+    setEventsLoading(false);
   }
 
   function validateFormTime() {
@@ -172,7 +176,7 @@ export default function KalenderPage() {
       alert("Waktu mulai/selesai tidak valid atau format salah.");
       return;
     }
-    setLoading(true);
+    setEventsLoading(true);
     try {
       const startISO = toISODateTime(form.start);
       const endISO = toISODateTime(form.end);
@@ -205,13 +209,13 @@ export default function KalenderPage() {
         alert("Gagal menambah event: " + (err.error?.message || ""));
       }
     } finally {
-      setLoading(false);
+      setEventsLoading(false);
     }
   }
 
   async function deleteEvent(id: string) {
     if (!accessToken) return;
-    setLoading(true);
+    setEventsLoading(true);
     try {
       await fetch(
         `https://www.googleapis.com/calendar/v3/calendars/primary/events/${id}`,
@@ -223,7 +227,7 @@ export default function KalenderPage() {
       await fetchEvents();
       setCalendarKey(k => k + 1); // force iframe reload setelah hapus event
     } finally {
-      setLoading(false);
+      setEventsLoading(false);
     }
   }
 
@@ -234,7 +238,7 @@ export default function KalenderPage() {
       alert("Waktu mulai/selesai tidak valid atau format salah.");
       return;
     }
-    setLoading(true);
+    setEventsLoading(true);
     try {
       const startISO = toISODateTime(form.start);
       const endISO = toISODateTime(form.end);
@@ -268,7 +272,7 @@ export default function KalenderPage() {
         alert("Gagal edit event: " + (err.error?.message || ""));
       }
     } finally {
-      setLoading(false);
+      setEventsLoading(false);
     }
   }
 
@@ -294,6 +298,14 @@ export default function KalenderPage() {
   const appEvents = events.filter(ev =>
     typeof ev.description === "string" && ev.description.replace(/\s+/g, "").includes("__FROM_APP__")
   );
+
+  useEffect(() => {
+    if (!loading && !user) {
+      router.push("/login");
+    }
+  }, [user, loading, router]);
+
+  if (loading || !user) return <div>Loading...</div>;
 
   return (
     <div>
@@ -386,7 +398,7 @@ export default function KalenderPage() {
             </div>
             <button
               onClick={fetchEvents}
-              disabled={loading}
+              disabled={eventsLoading}
               style={{
                 background: "linear-gradient(90deg,#6366f1,#60a5fa)",
                 color: "#fff",
@@ -406,7 +418,7 @@ export default function KalenderPage() {
                 transition: "background 0.2s",
               }}
             >
-              {loading ? "Mengambil event..." : "Ambil Event Kalender"}
+              {eventsLoading ? "Mengambil event..." : "Ambil Event Kalender"}
             </button>
             {/* Form tambah/edit event */}
             <form
@@ -528,7 +540,7 @@ export default function KalenderPage() {
               </div>
               <button
                 type="submit"
-                disabled={loading}
+                disabled={eventsLoading}
                 style={{
                   background: "#6366f1",
                   color: "#fff",

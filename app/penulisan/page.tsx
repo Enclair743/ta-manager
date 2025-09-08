@@ -4,6 +4,8 @@ import app from "../firebase";
 import { getFirestore, doc, getDoc, setDoc } from "firebase/firestore";
 import { v4 as uuidv4 } from "uuid";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { useAuth } from "../../src/context/AuthContext";
+import { useRouter } from "next/navigation";
 
 type ChecklistItem = {
   id: string;
@@ -56,6 +58,15 @@ export default function PenulisanPage() {
   const [theme, setTheme] = useState<"dark" | "light">("dark");
   const [showCopyOneDrive, setShowCopyOneDrive] = useState(false);
   const [showCopyDrive, setShowCopyDrive] = useState(false);
+
+  const { user, loading } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!loading && !user) {
+      router.push("/login");
+    }
+  }, [user, loading, router]);
 
   useEffect(() => {
     async function fetchChecklist() {
@@ -396,6 +407,8 @@ export default function PenulisanPage() {
       </>
     );
   }
+
+  if (loading || !user) return <div>Loading...</div>;
 
   return (
     <div style={{ maxWidth: 700, margin: "0 auto", marginTop: 30 }}>
