@@ -1,9 +1,11 @@
 "use client";
 import { useState, useEffect } from "react";
 import app from "../firebase";
-import { getFirestore, collection, addDoc, getDocs } from "firebase/firestore";
+import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, deleteDoc, DocumentData, QueryDocumentSnapshot } from "firebase/firestore";
+import jsPDF from "jspdf";
 
 type Catatan = {
+  id?: string;
   tanggal: string;
   nama?: string;
   isi: string;
@@ -14,13 +16,20 @@ export default function CatatanPage() {
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState<Catatan>({ tanggal: "", nama: "", isi: "" });
   const [selectedIdx, setSelectedIdx] = useState<number | null>(null);
+  const [editMode, setEditMode] = useState(false);
   const [theme, setTheme] = useState<"dark" | "light">("dark");
+  const [sortOrder, setSortOrder] = useState<"desc" | "asc">("desc");
+  const [search, setSearch] = useState("");
   const db = getFirestore(app);
 
+  // Fetch catatan dengan ID dokumen
   useEffect(() => {
     async function fetchCatatan() {
       const snapshot = await getDocs(collection(db, "catatan"));
-      setCatatanList(snapshot.docs.map(doc => doc.data() as Catatan));
+      setCatatanList(snapshot.docs.map((doc: QueryDocumentSnapshot<DocumentData>) => ({
+        id: doc.id,
+        ...doc.data()
+      } as Catatan)));
     }
     fetchCatatan();
   }, []);
@@ -31,18 +40,82 @@ export default function CatatanPage() {
     }
   }, []);
 
+  // Filtering & Sorting
+  let filteredCatatan = catatanList
+    .filter(c =>
+      c.nama?.toLowerCase().includes(search.toLowerCase()) ||
+      c.isi.toLowerCase().includes(search.toLowerCase())
+    )
+    .sort((a, b) => {
+      if (sortOrder === "desc") {
+        return a.tanggal < b.tanggal ? 1 : -1;
+      } else {
+        return a.tanggal > b.tanggal ? 1 : -1;
+      }
+    });
+
+  // Submit Form (Add or Edit)
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (form.tanggal && form.isi.trim()) {
-      setCatatanList([...catatanList, form]);
-      await addDoc(collection(db, "catatan"), form);
+      if (editMode && form.id) {
+        await updateDoc(doc(db, "catatan", form.id), {
+          tanggal: form.tanggal,
+          nama: form.nama,
+          isi: form.isi
+        });
+        setCatatanList(catatanList.map(c => c.id === form.id ? { ...form } : c));
+      } else {
+        const ref = await addDoc(collection(db, "catatan"), {
+          tanggal: form.tanggal,
+          nama: form.nama,
+          isi: form.isi
+        });
+        setCatatanList([...catatanList, { ...form, id: ref.id }]);
+      }
       setShowForm(false);
+      setEditMode(false);
       resetForm();
+    }
+  }
+
+  // Edit Catatan
+  function handleEdit(idx: number) {
+    const catatan = filteredCatatan[idx];
+    setForm(catatan);
+    setEditMode(true);
+    setShowForm(true);
+    setSelectedIdx(null);
+  }
+
+  // Hapus Catatan
+  async function handleDelete(idx: number) {
+    const catatan = filteredCatatan[idx];
+    if (catatan.id) {
+      await deleteDoc(doc(db, "catatan", catatan.id));
+      setCatatanList(catatanList.filter(c => c.id !== catatan.id));
+      setSelectedIdx(null);
     }
   }
 
   function resetForm() {
     setForm({ tanggal: "", nama: "", isi: "" });
+    setEditMode(false);
+  }
+
+  // Export ke PDF
+  function handleExportPDF(idx: number) {
+    const c = filteredCatatan[idx];
+    const docPDF = new jsPDF();
+    docPDF.setFontSize(16);
+    docPDF.text(`Catatan Asistensi TA`, 15, 20);
+    docPDF.setFontSize(12);
+    docPDF.text(`Tanggal: ${c.tanggal}`, 15, 30);
+    if (c.nama) docPDF.text(`Nama: ${c.nama}`, 15, 38);
+    docPDF.text(`Catatan:`, 15, 48);
+    docPDF.setFontSize(12);
+    docPDF.text(c.isi, 15, 57, { maxWidth: 175 });
+    docPDF.save(`catatan_${c.tanggal.replaceAll("-", "")}.pdf`);
   }
 
   return (
@@ -52,45 +125,63 @@ export default function CatatanPage() {
         marginBottom: "1em",
         color: theme === "dark" ? "#f3f4f6" : "#222"
       }}>Catatan Asistensi</h1>
-      <button
-        onClick={() => { setShowForm(true); resetForm(); }}
-        style={{
-          background: theme === "dark" ? "linear-gradient(90deg,#6366f1,#60a5fa)" : "linear-gradient(90deg,#e0e7ff,#a5b4fc)",
-          color: theme === "dark" ? "#fff" : "#222",
-          border: "none",
-          borderRadius: "12px",
-          padding: "1em 1.7em",
-          fontWeight: 600,
-          marginBottom: "1.5em",
-          cursor: "pointer",
-          boxShadow: theme === "dark"
-            ? "0 4px 16px rgba(99,102,241,0.18)"
-            : "0 4px 16px rgba(99,102,241,0.10)",
-          fontSize: "1.08em",
-          transition: "background 0.2s, box-shadow 0.2s, transform 0.2s"
-        }}
-        onMouseOver={e => {
-          e.currentTarget.style.background = theme === "dark"
-            ? "#6366f1"
-            : "#e0e7ff";
-          e.currentTarget.style.boxShadow = "0 8px 32px rgba(99,102,241,0.18)";
-          e.currentTarget.style.transform = "scale(1.04)";
-        }}
-        onMouseOut={e => {
-          e.currentTarget.style.background = theme === "dark"
-            ? "linear-gradient(90deg,#6366f1,#60a5fa)"
-            : "linear-gradient(90deg,#e0e7ff,#a5b4fc)";
-          e.currentTarget.style.boxShadow = theme === "dark"
-            ? "0 4px 16px rgba(99,102,241,0.18)"
-            : "0 4px 16px rgba(99,102,241,0.10)";
-          e.currentTarget.style.transform = "none";
-        }}
-      >
-        + Buat Catatan Baru
-      </button>
+
+      {/* Search & Sort */}
+      <div style={{
+        display: "flex", gap: "1em", alignItems: "center", marginBottom: "1.2em"
+      }}>
+        <input
+          type="text"
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          placeholder="Cari nama/isi catatan..."
+          style={{
+            padding: "0.7em",
+            borderRadius: "8px",
+            border: "1.5px solid #6366f1",
+            fontSize: "1em",
+            width: 220,
+            background: theme === "dark" ? "#23272f" : "#fff",
+            color: theme === "dark" ? "#f3f4f6" : "#222"
+          }}
+        />
+        <button
+          onClick={() => setSortOrder(sortOrder === "desc" ? "asc" : "desc")}
+          style={{
+            background: "#6366f1",
+            color: "#fff",
+            border: "none",
+            borderRadius: "8px",
+            padding: "0.7em 1.2em",
+            fontWeight: 500,
+            cursor: "pointer"
+          }}
+        >
+          Urutkan: {sortOrder === "desc" ? "Terbaru" : "Terlama"}
+        </button>
+        <button
+          onClick={() => { setShowForm(true); resetForm(); }}
+          style={{
+            background: theme === "dark" ? "linear-gradient(90deg,#6366f1,#60a5fa)" : "linear-gradient(90deg,#e0e7ff,#a5b4fc)",
+            color: theme === "dark" ? "#fff" : "#222",
+            border: "none",
+            borderRadius: "12px",
+            padding: "0.7em 1.2em",
+            fontWeight: 600,
+            cursor: "pointer",
+            boxShadow: theme === "dark"
+              ? "0 4px 16px rgba(99,102,241,0.18)"
+              : "0 4px 16px rgba(99,102,241,0.10)",
+            fontSize: "1.08em"
+          }}
+        >
+          + Catatan Baru
+        </button>
+      </div>
+
+      {/* Form Add/Edit */}
       {showForm && (
         <div style={{
-          border: "none",
           padding: "2.2rem",
           margin: "1.5rem 0",
           background: theme === "dark" ? "#23272f" : "#fff",
@@ -171,11 +262,11 @@ export default function CatatanPage() {
                 cursor: "pointer"
               }}
             >
-              Simpan
+              {editMode ? "Update" : "Simpan"}
             </button>
             <button
               type="button"
-              onClick={() => setShowForm(false)}
+              onClick={() => { setShowForm(false); setEditMode(false); }}
               style={{
                 marginLeft: "8px",
                 background: theme === "dark" ? "#353a47" : "#e0e7ff",
@@ -192,17 +283,18 @@ export default function CatatanPage() {
           </form>
         </div>
       )}
+
+      {/* Card Catatan Interaktif */}
       <ul style={{
         marginTop: "1.5rem",
         padding: 0,
         listStyle: "none",
-        display: "grid",
+        display: "flex",
+        flexDirection: "column",
         gap: "1.3em"
       }}>
-        {catatanList.map((c, i) => (
-          <li key={i} style={{
-            cursor: "pointer",
-            marginBottom: "10px",
+        {filteredCatatan.map((c, i) => (
+          <li key={c.id || i} style={{
             background: theme === "dark" ? "#23272f" : "#fff",
             borderRadius: "18px",
             padding: "1.3em 1.7em",
@@ -213,6 +305,10 @@ export default function CatatanPage() {
             fontSize: "1.08em",
             color: theme === "dark" ? "#f3f4f6" : "#222",
             border: "1px solid " + (theme === "dark" ? "#353a47" : "#e0e7ff"),
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
             transition: "box-shadow 0.2s, background 0.2s, transform 0.2s"
           }}
             onClick={() => setSelectedIdx(i)}
@@ -229,12 +325,36 @@ export default function CatatanPage() {
               e.currentTarget.style.transform = "none";
             }}
           >
-            <span>
-              {c.tanggal}{c.nama ? `_${c.nama}` : ""}
-            </span>
+            <div>
+              <div style={{ marginBottom: "6px" }}>
+                <span style={{
+                  background: (new Date(c.tanggal).toDateString() === new Date().toDateString()) ? "#f59e42" : "#a5b4fc",
+                  color: "#fff",
+                  borderRadius: "6px",
+                  padding: "3px 10px",
+                  fontSize: "0.9em",
+                  marginRight: "10px"
+                }}>
+                  {c.tanggal}
+                </span>
+                {c.nama && <span style={{ color: "#6366f1", marginRight: "10px" }}>{c.nama}</span>}
+              </div>
+              <div style={{
+                opacity: 0.7,
+                fontSize: "0.97em"
+              }}>{c.isi.length > 60 ? c.isi.slice(0, 60) + "..." : c.isi}</div>
+            </div>
+            <span style={{
+              fontSize: "0.9em",
+              color: "#6366f1",
+              fontWeight: 600,
+              marginLeft: "1em"
+            }}>Detail</span>
           </li>
         ))}
       </ul>
+
+      {/* Modal Detail Catatan */}
       {selectedIdx !== null && (
         <div style={{
           border: "none",
@@ -248,8 +368,8 @@ export default function CatatanPage() {
           color: theme === "dark" ? "#f3f4f6" : "#222"
         }}>
           <h3 style={{ marginBottom: "0.5em", color: theme === "dark" ? "#f3f4f6" : "#222" }}>
-            {catatanList[selectedIdx].tanggal}
-            {catatanList[selectedIdx].nama ? ` - ${catatanList[selectedIdx].nama}` : ""}
+            {filteredCatatan[selectedIdx].tanggal}
+            {filteredCatatan[selectedIdx].nama ? ` - ${filteredCatatan[selectedIdx].nama}` : ""}
           </h3>
           <pre style={{
             whiteSpace: "pre-wrap",
@@ -257,22 +377,66 @@ export default function CatatanPage() {
             color: theme === "dark" ? "#f3f4f6" : "#222",
             marginBottom: "1em"
           }}>
-            {catatanList[selectedIdx].isi}
+            {filteredCatatan[selectedIdx].isi}
           </pre>
-          <button
-            onClick={() => setSelectedIdx(null)}
-            style={{
-              background: "#0070f3",
-              color: "#fff",
-              border: "none",
-              borderRadius: "8px",
-              padding: "0.7em 1.2em",
-              fontWeight: 500,
-              cursor: "pointer"
-            }}
-          >
-            Tutup
-          </button>
+          <div style={{ display: "flex", gap: "1em", marginTop: "0.5em" }}>
+            <button
+              onClick={() => setSelectedIdx(null)}
+              style={{
+                background: "#0070f3",
+                color: "#fff",
+                border: "none",
+                borderRadius: "8px",
+                padding: "0.7em 1.2em",
+                fontWeight: 500,
+                cursor: "pointer"
+              }}
+            >
+              Tutup
+            </button>
+            <button
+              onClick={() => handleEdit(selectedIdx!)}
+              style={{
+                background: "#6366f1",
+                color: "#fff",
+                border: "none",
+                borderRadius: "8px",
+                padding: "0.7em 1.2em",
+                fontWeight: 500,
+                cursor: "pointer"
+              }}
+            >
+              Edit
+            </button>
+            <button
+              onClick={() => handleDelete(selectedIdx!)}
+              style={{
+                background: "#ef4444",
+                color: "#fff",
+                border: "none",
+                borderRadius: "8px",
+                padding: "0.7em 1.2em",
+                fontWeight: 500,
+                cursor: "pointer"
+              }}
+            >
+              Hapus
+            </button>
+            <button
+              onClick={() => handleExportPDF(selectedIdx!)}
+              style={{
+                background: "#f59e42",
+                color: "#fff",
+                border: "none",
+                borderRadius: "8px",
+                padding: "0.7em 1.2em",
+                fontWeight: 500,
+                cursor: "pointer"
+              }}
+            >
+              Export PDF
+            </button>
+          </div>
         </div>
       )}
     </div>
