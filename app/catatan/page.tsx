@@ -43,7 +43,7 @@ export default function CatatanPage() {
   // Filtering & Sorting
   let filteredCatatan = catatanList
     .filter(c =>
-      c.nama?.toLowerCase().includes(search.toLowerCase()) ||
+      (c.nama?.toLowerCase() ?? "").includes(search.toLowerCase()) ||
       c.isi.toLowerCase().includes(search.toLowerCase())
     )
     .sort((a, b) => {
@@ -92,6 +92,7 @@ export default function CatatanPage() {
   async function handleDelete(idx: number) {
     const catatan = filteredCatatan[idx];
     if (catatan.id) {
+      if (!confirm("Yakin ingin menghapus catatan ini?")) return;
       await deleteDoc(doc(db, "catatan", catatan.id));
       setCatatanList(catatanList.filter(c => c.id !== catatan.id));
       setSelectedIdx(null);
@@ -294,24 +295,32 @@ export default function CatatanPage() {
         gap: "1.3em"
       }}>
         {filteredCatatan.map((c, i) => (
-          <li key={c.id || i} style={{
-            background: theme === "dark" ? "#23272f" : "#fff",
-            borderRadius: "18px",
-            padding: "1.3em 1.7em",
-            boxShadow: theme === "dark"
-              ? "0 4px 16px rgba(99,102,241,0.18)"
-              : "0 4px 16px rgba(99,102,241,0.10)",
-            fontWeight: 500,
-            fontSize: "1.08em",
-            color: theme === "dark" ? "#f3f4f6" : "#222",
-            border: "1px solid " + (theme === "dark" ? "#353a47" : "#e0e7ff"),
-            cursor: "pointer",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            transition: "box-shadow 0.2s, background 0.2s, transform 0.2s"
-          }}
-            onClick={() => setSelectedIdx(i)}
+          <li
+            key={c.id || i}
+            style={{
+              background: theme === "dark" ? "#23272f" : "#fff",
+              borderRadius: "18px",
+              padding: "1.3em 1.7em",
+              boxShadow: theme === "dark"
+                ? "0 4px 16px rgba(99,102,241,0.18)"
+                : "0 4px 16px rgba(99,102,241,0.10)",
+              fontWeight: 500,
+              fontSize: "1.08em",
+              color: theme === "dark" ? "#f3f4f6" : "#222",
+              border: "1px solid " + (theme === "dark" ? "#353a47" : "#e0e7ff"),
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              transition: "box-shadow 0.2s, background 0.2s, transform 0.2s"
+            }}
+            onClick={() => {
+              if (selectedIdx === i) {
+                setSelectedIdx(null); // Ketuk kartu aktif = tutup modal
+              } else {
+                setSelectedIdx(i);    // Ketuk kartu lain = buka modal
+              }
+            }}
             onMouseOver={e => {
               e.currentTarget.style.background = theme === "dark" ? "#353a47" : "#e0e7ff";
               e.currentTarget.style.boxShadow = "0 8px 32px rgba(99,102,241,0.18)";
@@ -354,88 +363,116 @@ export default function CatatanPage() {
         ))}
       </ul>
 
-      {/* Modal Detail Catatan */}
+      {/* Modal Detail Catatan (Overlay + Sticky Button) */}
       {selectedIdx !== null && (
-        <div style={{
-          border: "none",
-          padding: "2rem",
-          marginTop: "1.5rem",
-          background: theme === "dark" ? "#23272f" : "#fff",
-          borderRadius: "18px",
-          boxShadow: theme === "dark"
-            ? "0 8px 32px rgba(99,102,241,0.18)"
-            : "0 8px 32px rgba(99,102,241,0.10)",
-          color: theme === "dark" ? "#f3f4f6" : "#222"
-        }}>
-          <h3 style={{ marginBottom: "0.5em", color: theme === "dark" ? "#f3f4f6" : "#222" }}>
-            {filteredCatatan[selectedIdx].tanggal}
-            {filteredCatatan[selectedIdx].nama ? ` - ${filteredCatatan[selectedIdx].nama}` : ""}
-          </h3>
-          <pre style={{
-            whiteSpace: "pre-wrap",
-            fontSize: "1.1em",
-            color: theme === "dark" ? "#f3f4f6" : "#222",
-            marginBottom: "1em"
-          }}>
-            {filteredCatatan[selectedIdx].isi}
-          </pre>
-          <div style={{ display: "flex", gap: "1em", marginTop: "0.5em" }}>
-            <button
-              onClick={() => setSelectedIdx(null)}
-              style={{
-                background: "#0070f3",
-                color: "#fff",
-                border: "none",
-                borderRadius: "8px",
-                padding: "0.7em 1.2em",
-                fontWeight: 500,
-                cursor: "pointer"
-              }}
-            >
-              Tutup
-            </button>
-            <button
-              onClick={() => handleEdit(selectedIdx!)}
-              style={{
-                background: "#6366f1",
-                color: "#fff",
-                border: "none",
-                borderRadius: "8px",
-                padding: "0.7em 1.2em",
-                fontWeight: 500,
-                cursor: "pointer"
-              }}
-            >
-              Edit
-            </button>
-            <button
-              onClick={() => handleDelete(selectedIdx!)}
-              style={{
-                background: "#ef4444",
-                color: "#fff",
-                border: "none",
-                borderRadius: "8px",
-                padding: "0.7em 1.2em",
-                fontWeight: 500,
-                cursor: "pointer"
-              }}
-            >
-              Hapus
-            </button>
-            <button
-              onClick={() => handleExportPDF(selectedIdx!)}
-              style={{
-                background: "#f59e42",
-                color: "#fff",
-                border: "none",
-                borderRadius: "8px",
-                padding: "0.7em 1.2em",
-                fontWeight: 500,
-                cursor: "pointer"
-              }}
-            >
-              Export PDF
-            </button>
+        <div
+          style={{
+            position: "fixed",
+            top: 0, left: 0, right: 0, bottom: 0,
+            background: "rgba(0,0,0,0.3)",
+            zIndex: 10
+          }}
+          onClick={() => setSelectedIdx(null)}
+        >
+          <div
+            style={{
+              position: "relative",
+              maxWidth: 600,
+              margin: "3rem auto",
+              background: theme === "dark" ? "#23272f" : "#fff",
+              borderRadius: "18px",
+              padding: "2rem",
+              boxShadow: "0 8px 32px rgba(99,102,241,0.18)",
+              color: theme === "dark" ? "#f3f4f6" : "#222",
+              overflow: "hidden"
+            }}
+            onClick={e => e.stopPropagation()}
+          >
+            <h3 style={{ marginBottom: "0.5em", color: theme === "dark" ? "#f3f4f6" : "#222" }}>
+              {filteredCatatan[selectedIdx].tanggal}
+              {filteredCatatan[selectedIdx].nama ? ` - ${filteredCatatan[selectedIdx].nama}` : ""}
+            </h3>
+            <pre style={{
+              whiteSpace: "pre-wrap",
+              fontSize: "1.1em",
+              color: theme === "dark" ? "#f3f4f6" : "#222",
+              marginBottom: "2.5em",
+              maxHeight: "50vh",
+              overflowY: "auto"
+            }}>
+              {filteredCatatan[selectedIdx].isi}
+            </pre>
+            {/* Sticky Action Bar */}
+            <div style={{
+              position: "sticky",
+              bottom: "0",
+              left: 0,
+              width: "100%",
+              background: theme === "dark" ? "#23272f" : "#fff",
+              padding: "1em 0",
+              display: "flex",
+              gap: "1em",
+              borderTop: "1px solid #6366f1",
+              justifyContent: "flex-end",
+              zIndex: 2
+            }}>
+              <button
+                onClick={() => setSelectedIdx(null)}
+                style={{
+                  background: "#0070f3",
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: "8px",
+                  padding: "0.7em 1.2em",
+                  fontWeight: 500,
+                  cursor: "pointer"
+                }}
+              >
+                Tutup
+              </button>
+              <button
+                onClick={() => handleEdit(selectedIdx!)}
+                style={{
+                  background: "#6366f1",
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: "8px",
+                  padding: "0.7em 1.2em",
+                  fontWeight: 500,
+                  cursor: "pointer"
+                }}
+              >
+                Edit
+              </button>
+              <button
+                onClick={() => handleDelete(selectedIdx!)}
+                style={{
+                  background: "#ef4444",
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: "8px",
+                  padding: "0.7em 1.2em",
+                  fontWeight: 500,
+                  cursor: "pointer"
+                }}
+              >
+                Hapus
+              </button>
+              <button
+                onClick={() => handleExportPDF(selectedIdx!)}
+                style={{
+                  background: "#f59e42",
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: "8px",
+                  padding: "0.7em 1.2em",
+                  fontWeight: 500,
+                  cursor: "pointer"
+                }}
+              >
+                Export PDF
+              </button>
+            </div>
           </div>
         </div>
       )}
