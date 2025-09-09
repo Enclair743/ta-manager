@@ -32,6 +32,8 @@ const defaultBerkas = [
 ];
 
 export default function PenulisanPage() {
+  const [theme, setTheme] = useState<"dark" | "light">("dark");
+  
   // Color palette mirip dashboard/catatan
   const colorAccent = '#7c3aed';
   const colorAccentLight = '#c7d2fe';
@@ -80,7 +82,6 @@ export default function PenulisanPage() {
 
   const [onedrive, setOnedrive] = useState("");
   const [drive, setDrive] = useState("");
-  const [theme, setTheme] = useState<"dark" | "light">("dark");
   const [showCopyOneDrive, setShowCopyOneDrive] = useState(false);
   const [showCopyDrive, setShowCopyDrive] = useState(false);
 
