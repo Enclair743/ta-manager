@@ -11,6 +11,7 @@ export default function LoginPage() {
   const { user, setUser, calendarToken, setCalendarToken } = authCalendar;
   const router = useRouter();
   const [errorMessage, setErrorMessage] = useState("");
+  const [googleReady, setGoogleReady] = useState(false);
 
   useEffect(() => {
     // Jika sudah login aplikasi dan kalender, langsung ke dashboard
@@ -26,6 +27,17 @@ export default function LoginPage() {
       return () => clearTimeout(timer);
     }
   }, [user, calendarToken, router]);
+
+  useEffect(() => {
+    function waitForGoogle() {
+      if (window.google && window.google.accounts) {
+        setGoogleReady(true);
+      } else {
+        setTimeout(waitForGoogle, 300);
+      }
+    }
+    waitForGoogle();
+  }, []);
 
   const handleUnifiedLogin = async () => {
     console.log("[Login] Mulai login Firebase...");
@@ -79,6 +91,7 @@ export default function LoginPage() {
           cursor: "pointer",
           fontSize: "1.1em"
         }}
+        disabled={!googleReady}
       >
         Login Google
       </button>
