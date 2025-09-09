@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { AuthProvider } from "../src/context/AuthContext";
+import { AuthCalendarProvider } from "../src/context/AuthCalendarContext";
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   const [theme, setTheme] = useState<"dark" | "light">("dark");
@@ -77,7 +77,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         `}</style>
       </head>
       <body data-theme={theme} style={bodyStyle}>
-        <AuthProvider>
+        <AuthCalendarProvider>
           <header style={{
             padding: "1rem 2rem",
             borderBottom: theme === "dark" ? "1px solid #23272f" : "1px solid #ddd",
@@ -125,7 +125,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <main style={mainStyle}>
             {children}
           </main>
-        </AuthProvider>
+        </AuthCalendarProvider>
       </body>
     </html>
   );
