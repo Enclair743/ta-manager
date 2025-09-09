@@ -6,7 +6,9 @@ import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 
 export default function LoginPage() {
-  const { user, setUser, calendarToken, setCalendarToken } = useAuthCalendar();
+  const authCalendar = useAuthCalendar();
+  if (!authCalendar) return null;
+  const { user, setUser, calendarToken, setCalendarToken } = authCalendar;
   const router = useRouter();
 
   useEffect(() => {
@@ -20,6 +22,7 @@ export default function LoginPage() {
     // Step 1: Login Firebase (Aplikasi)
     const provider = new GoogleAuthProvider();
     const result = await signInWithPopup(auth, provider);
+    // Simpan data user hasil login Firebase ke context
     setUser(result.user);
 
     // Step 2: Login Google Calendar OAuth (GIS)
