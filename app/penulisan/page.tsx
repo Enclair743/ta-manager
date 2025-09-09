@@ -42,450 +42,451 @@ const colorSuccess = '#34d399';
 const db = getFirestore(app);
 const storage = getStorage(app);
 const checklistDoc = doc(db, "penulisan", "checklist");
-const [penulisanList, setPenulisanList] = useState<ChecklistItem[]>(defaultPenulisan);
-const [newPenulisan, setNewPenulisan] = useState("");
-const [editPenulisanId, setEditPenulisanId] = useState<string | null>(null);
-const [editPenulisanText, setEditPenulisanText] = useState("");
-
-const [tugasList, setTugasList] = useState<ChecklistItem[]>([]);
-const [newTugas, setNewTugas] = useState("");
-const [editTugasId, setEditTugasId] = useState<string | null>(null);
-const [editTugasText, setEditTugasText] = useState("");
-
-// Checklist Berkas
-const [berkasList, setBerkasList] = useState<ChecklistItem[]>(defaultBerkas);
-const [newBerkas, setNewBerkas] = useState("");
-const [editBerkasId, setEditBerkasId] = useState<string | null>(null);
-const [editBerkasText, setEditBerkasText] = useState("");
-const [uploadingId, setUploadingId] = useState<string | null>(null);
-const [uploadError, setUploadError] = useState<string | null>(null);
-
-const [onedrive, setOnedrive] = useState("");
-const [drive, setDrive] = useState("");
-const [theme, setTheme] = useState<"dark" | "light">("dark");
-// Semua konstanta warna didefinisikan setelah deklarasi theme
-const colorCardBg = theme === 'dark' ? 'rgba(36, 41, 54, 0.82)' : 'rgba(255,255,255,0.96)';
-const colorMainBg = theme === 'dark'
-  ? ('linear-gradient(120deg,#18181b 60%,#23272f 100%)' as string)
-  : ('linear-gradient(120deg,#eef2ff 60%,#f5f7fb 100%)' as string);
-const colorText = theme === 'dark' ? '#f3f4f6' : '#22223b';
-const colorLabel = theme === 'dark' ? colorAccentSoft : colorAccent;
-const colorInputBg = theme === 'dark' ? 'rgba(36,41,54,0.92)' : '#fff';
-const colorInputBorder = theme === 'dark' ? colorAccentSoft : colorAccent;
-const colorShadow = theme === 'dark'
-  ? '0 2px 8px 0 rgba(0,0,0,0.25)'
-  : '0 2px 8px 0 rgba(0,0,0,0.08)';
-const colorGlassBorder = theme === 'dark'
-  ? 'rgba(255,255,255,0.08)'
-  : 'rgba(36,41,54,0.08)';
-const colorGlassShadow = theme === 'dark'
-  ? '0 2px 8px 0 rgba(0,0,0,0.32)'
-  : '0 2px 8px 0 rgba(0,0,0,0.12)';
-
-const { user, loading } = useAuth();
-const router = useRouter();
-
-useEffect(() => {
-  if (!loading && !user) {
-    router.push("/login");
-  }
-}, [user, loading, router]);
-
-useEffect(() => {
-  async function fetchChecklist() {
-    const snap = await getDoc(checklistDoc);
-    if (snap.exists()) {
-      const data = snap.data();
-      if (Array.isArray(data.penulisanList)) setPenulisanList(data.penulisanList);
-      if (Array.isArray(data.tugasList)) setTugasList(data.tugasList);
-      if (Array.isArray(data.berkasList)) setBerkasList(data.berkasList);
-      if (typeof data.onedrive === "string") setOnedrive(data.onedrive);
-      if (typeof data.drive === "string") setDrive(data.drive);
-    }
-  }
-  fetchChecklist();
-
-  if (typeof window !== "undefined") {
-    setTheme(document.body.getAttribute("data-theme") === "light" ? "light" : "dark");
-  }
-}, []);
-
-// Checklist Penulisan Actions
-async function handlePenulisanCheck(idx: number) {
-  const updated = [...penulisanList];
-  updated[idx].checked = !updated[idx].checked;
-  setPenulisanList(updated);
-  await setDoc(checklistDoc, { penulisanList: updated, tugasList, berkasList, onedrive, drive }, { merge: true });
-}
-async function handlePenulisanAdd() {
-  if (newPenulisan.trim()) {
-    const updated = [...penulisanList, { id: uuidv4(), text: newPenulisan, checked: false }];
-    setPenulisanList(updated);
-    setNewPenulisan("");
-    await setDoc(checklistDoc, { penulisanList: updated, tugasList, berkasList, onedrive, drive }, { merge: true });
-  }
-}
-function startEditPenulisan(item: ChecklistItem) {
-  setEditPenulisanId(item.id);
-  setEditPenulisanText(item.text);
-}
-async function handlePenulisanEditSave() {
-  if (editPenulisanId && editPenulisanText.trim()) {
-    const updated = penulisanList.map(i =>
-      i.id === editPenulisanId ? { ...i, text: editPenulisanText } : i
-    );
-    setPenulisanList(updated);
-    setEditPenulisanId(null);
-    setEditPenulisanText("");
-    await setDoc(checklistDoc, { penulisanList: updated, tugasList, berkasList, onedrive, drive }, { merge: true });
-  }
-}
-async function handlePenulisanDelete(id: string) {
-  const updated = penulisanList.filter(i => i.id !== id);
-  setPenulisanList(updated);
-  await setDoc(checklistDoc, { penulisanList: updated, tugasList, berkasList, onedrive, drive }, { merge: true });
-}
-
-// Checklist Tugas Actions
-async function handleTugasCheck(idx: number) {
-  const updated = [...tugasList];
-  updated[idx].checked = !updated[idx].checked;
-  setTugasList(updated);
-  await setDoc(checklistDoc, { penulisanList, tugasList: updated, berkasList, onedrive, drive }, { merge: true });
-}
-async function handleTugasAdd() {
-  if (newTugas.trim()) {
-    const updated = [...tugasList, { id: uuidv4(), text: newTugas, checked: false }];
-    setTugasList(updated);
-    setNewTugas("");
-    await setDoc(checklistDoc, { penulisanList, tugasList: updated, berkasList, onedrive, drive }, { merge: true });
-  }
-}
-function startEditTugas(item: ChecklistItem) {
-  setEditTugasId(item.id);
-  setEditTugasText(item.text);
-}
-async function handleTugasEditSave() {
-  if (editTugasId && editTugasText.trim()) {
-    const updated = tugasList.map(i =>
-      i.id === editTugasId ? { ...i, text: editTugasText } : i
-    );
-    setTugasList(updated);
-    setEditTugasId(null);
-    setEditTugasText("");
-    await setDoc(checklistDoc, { penulisanList, tugasList: updated, berkasList, onedrive, drive }, { merge: true });
-  }
-}
-async function handleTugasDelete(id: string) {
-  const updated = tugasList.filter(i => i.id !== id);
-  setTugasList(updated);
-  await setDoc(checklistDoc, { penulisanList, tugasList: updated, berkasList, onedrive, drive }, { merge: true });
-}
-
-// Checklist Berkas Actions
-async function handleBerkasCheck(idx: number) {
-  const updated = [...berkasList];
-  updated[idx].checked = !updated[idx].checked;
-  setBerkasList(updated);
-  await setDoc(checklistDoc, { penulisanList, tugasList, berkasList: updated, onedrive, drive }, { merge: true });
-}
-async function handleBerkasAdd() {
-  if (newBerkas.trim()) {
-    const updated = [...berkasList, { id: uuidv4(), text: newBerkas, checked: false }];
-    setBerkasList(updated);
-    setNewBerkas("");
-    await setDoc(checklistDoc, { penulisanList, tugasList, berkasList: updated, onedrive, drive }, { merge: true });
-  }
-}
-function startEditBerkas(item: ChecklistItem) {
-  setEditBerkasId(item.id);
-  setEditBerkasText(item.text);
-}
-async function handleBerkasEditSave() {
-  if (editBerkasId && editBerkasText.trim()) {
-    const updated = berkasList.map(i =>
-      i.id === editBerkasId ? { ...i, text: editBerkasText } : i
-    );
-    setBerkasList(updated);
-    setEditBerkasId(null);
-    setEditBerkasText("");
-    await setDoc(checklistDoc, { penulisanList, tugasList, berkasList: updated, onedrive, drive }, { merge: true });
-  }
-}
-async function handleBerkasDelete(id: string) {
-  const updated = berkasList.filter(i => i.id !== id);
-  setBerkasList(updated);
-  await setDoc(checklistDoc, { penulisanList, tugasList, berkasList: updated, onedrive, drive }, { merge: true });
-}
-
-// Upload Berkas (Firebase Storage)
-async function handleBerkasUpload(id: string, file: File) {
-  setUploadingId(id);
-  setUploadError(null);
-  try {
-    const storageRef = ref(storage, `berkas_ta/${id}_${file.name}`);
-    await uploadBytes(storageRef, file);
-    const url = await getDownloadURL(storageRef);
-    const updated = berkasList.map(item =>
-      item.id === id ? { ...item, fileUrl: url, fileName: file.name } : item
-    );
-    setBerkasList(updated);
-    await setDoc(checklistDoc, { penulisanList, tugasList, berkasList: updated, onedrive, drive }, { merge: true });
-  } catch (err: any) {
-    setUploadError("Gagal upload berkas.");
-  }
-  setUploadingId(null);
-}
-async function handleBerkasRemoveFile(id: string) {
-  const updated = berkasList.map(item =>
-    item.id === id ? { ...item, fileUrl: undefined, fileName: undefined } : item
-  );
-  setBerkasList(updated);
-  await setDoc(checklistDoc, { penulisanList, tugasList, berkasList: updated, onedrive, drive }, { merge: true });
-}
-
-// OneDrive & Drive
-async function handleOnedriveChange(val: string) {
-  setOnedrive(val);
-  await setDoc(checklistDoc, { penulisanList, tugasList, berkasList, onedrive: val, drive }, { merge: true });
-}
-async function handleDriveChange(val: string) {
-  setDrive(val);
-  await setDoc(checklistDoc, { penulisanList, tugasList, berkasList, onedrive, drive: val }, { merge: true });
-}
-function handleCopyOneDrive() {
-  if (onedrive) {
-    navigator.clipboard.writeText(onedrive);
-    setShowCopyOneDrive(true);
-    setTimeout(() => setShowCopyOneDrive(false), 1500);
-  }
-}
-function handleCopyDrive() {
-  if (drive) {
-    navigator.clipboard.writeText(drive);
-    setShowCopyDrive(true);
-    setTimeout(() => setShowCopyDrive(false), 1500);
-  }
-}
-
-// Style helpers
-const cardStyle = {
-  background: theme === "dark" ? "#23272f" : "#fff",
-  borderRadius: "18px",
-  boxShadow: theme === "dark"
-    ? "0 8px 32px rgba(99,102,241,0.18)"
-    : "0 8px 32px rgba(99,102,241,0.10)",
-  padding: "1.7em 2em",
-  marginBottom: "2em",
-  color: theme === "dark" ? "#f3f4f6" : "#222",
-  border: theme === "dark" ? "1.5px solid #353a47" : "none",
-};
-
-const btn = {
-  background: "#6366f1",
-  color: "#fff",
-  border: "none",
-  borderRadius: "6px",
-  padding: "0.3em 0.9em",
-  fontWeight: 500,
-  cursor: "pointer",
-  fontSize: "1em"
-};
-const btnRed = {
-  ...btn,
-  background: "#ef4444",
-};
-const btnGray = {
-  ...btn,
-  background: "#a5b4fc",
-  color: "#23272f",
-};
-
-// ----- Checklist Item Layout -----
-function renderChecklistList({
-  list,
-  onCheck,
-  onEdit,
-  onDelete,
-  editId,
-  editText,
-  setEditText,
-  onEditSave,
-  setEditId,
-  placeholder,
-  newValue,
-  setNewValue,
-  onAdd,
-}: {
-  list: ChecklistItem[];
-  onCheck: (idx: number) => void;
-  onEdit: (item: ChecklistItem) => void;
-  onDelete: (id: string) => void;
-  editId: string | null;
-  editText: string;
-  setEditText: (txt: string) => void;
-  onEditSave: () => void;
-  setEditId: typeof setEditPenulisanId | typeof setEditTugasId | typeof setEditBerkasId;
-  placeholder: string;
-  newValue: string;
-  setNewValue: (txt: string) => void;
-  onAdd: () => void;
-}) {
-  return (
-    <>
-      <ul style={{
-        listStyle: "none",
-        padding: 0,
-        marginBottom: "1em",
-      }}>
-        {list.map((item, i) => (
-          <li key={item.id} style={{
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "flex-start",
-            marginBottom: "1.3em",
-            background: item.checked
-              ? (theme === "dark" ? "#23272f" : "#e0e7ff")
-              : (theme === "dark" ? "#23272f" : "#fff"),
-            borderRadius: "10px",
-            padding: "1em",
-            boxShadow: item.checked
-              ? "0 4px 16px rgba(99,102,241,0.15)"
-              : "0 2px 8px rgba(99,102,241,0.05)",
-            border: item.checked
-              ? "1.5px solid #6366f1"
-              : "1px solid #353a47",
-            color: theme === "dark" ? "#f3f4f6" : "#222",
-            transition: "box-shadow 0.2s, background 0.2s"
-          }}>
-            <div style={{ display: "flex", alignItems: "center", width: "100%" }}>
-              <input
-                type="checkbox"
-                checked={item.checked}
-                onChange={() => onCheck(i)}
-                style={{
-                  marginRight: "1em",
-                  accentColor: "#6366f1",
-                  width: "1.2em",
-                  height: "1.2em",
-                }}
-              />
-              {editId === item.id ? (
-                <>
-                  <input
-                    type="text"
-                    value={editText}
-                    onChange={e => setEditText(e.target.value)}
-                    style={{
-                      flex: 1,
-                      marginRight: "0.5em",
-                      padding: "0.5em",
-                      borderRadius: "6px",
-                      border: "1px solid #6366f1"
-                    }}
-                  />
-                  <button onClick={onEditSave}
-                    style={{ ...btn, marginRight: "0.3em" }}>Simpan</button>
-                  <button onClick={() => setEditId(null)}
-                    style={btnGray}>Batal</button>
-                </>
-              ) : (
-                <>
-                  <span style={{ flex: 1, fontWeight: 500, fontSize: "1.08em" }}>{item.text}</span>
-                  <button onClick={() => onEdit(item)}
-                    style={{ ...btn, marginRight: "0.3em" }}>Edit</button>
-                  <button onClick={() => onDelete(item.id)}
-                    style={btnRed}>Hapus</button>
-                </>
-              )}
-            </div>
-          </li>
-        ))}
-      </ul>
-      <div style={{ display: "flex", gap: "0.6em", marginTop: "0.5em" }}>
-        <input
-          type="text"
-          value={newValue}
-          onChange={e => setNewValue(e.target.value)}
-          placeholder={placeholder}
-          style={{
-            flex: 1,
-            padding: "0.7em",
-            borderRadius: "8px",
-            border: "1.5px solid #6366f1",
-            fontSize: "1em"
-          }}
-        />
-        <button
-          onClick={onAdd}
-          style={{
-            ...btn,
-            padding: "0.7em 1.2em",
-            fontWeight: 500,
-          }}
-        >
-          +
-        </button>
-      </div>
-    </>
-  );
-}
-
-// Responsive style for mobile
-const responsiveStyle = `
-  @media (max-width: 600px) {
-    body {
-      padding: 0 !important;
-    }
-    main {
-      padding: 0.7rem !important;
-      max-width: 100vw !important;
-      margin-top: 0.5rem !important;
-      border-radius: 0 !important;
-      min-height: 90vh !important;
-    }
-    header {
-      padding: 0.7rem 1rem !important;
-      font-size: 1em !important;
-    }
-    .nav-link, .theme-toggle-btn {
-      font-size: 1em !important;
-      padding: 0.2em 0.5em !important;
-    }
-    h1 {
-      font-size: 1.3em !important;
-    }
-    h2 {
-      font-size: 1.1em !important;
-    }
-    [data-section-style], [data-card-style] {
-      padding: 1em 0.5em !important;
-      max-width: 100vw !important;
-      border-radius: 10px !important;
-    }
-    .main-menu-cards {
-      flex-direction: column !important;
-      gap: 1em !important;
-      min-width: 0 !important;
-      max-width: 100vw !important;
-    }
-    .main-menu-cards a {
-      min-width: 0 !important;
-      max-width: 100vw !important;
-      font-size: 1em !important;
-      padding: 1em 0.5em !important;
-    }
-    .checklist-section, .progress-section, .jadwal-section {
-      padding: 1em 0.5em !important;
-      max-width: 100vw !important;
-    }
-  }
-`;
-
-const [showCopyOneDrive, setShowCopyOneDrive] = useState(false);
-const [showCopyDrive, setShowCopyDrive] = useState(false);
 
 function PenulisanPage() {
+  const [penulisanList, setPenulisanList] = useState<ChecklistItem[]>(defaultPenulisan);
+  const [newPenulisan, setNewPenulisan] = useState("");
+  const [editPenulisanId, setEditPenulisanId] = useState<string | null>(null);
+  const [editPenulisanText, setEditPenulisanText] = useState("");
+
+  const [tugasList, setTugasList] = useState<ChecklistItem[]>([]);
+  const [newTugas, setNewTugas] = useState("");
+  const [editTugasId, setEditTugasId] = useState<string | null>(null);
+  const [editTugasText, setEditTugasText] = useState("");
+
+  // Checklist Berkas
+  const [berkasList, setBerkasList] = useState<ChecklistItem[]>(defaultBerkas);
+  const [newBerkas, setNewBerkas] = useState("");
+  const [editBerkasId, setEditBerkasId] = useState<string | null>(null);
+  const [editBerkasText, setEditBerkasText] = useState("");
+  const [uploadingId, setUploadingId] = useState<string | null>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+
+  const [onedrive, setOnedrive] = useState("");
+  const [drive, setDrive] = useState("");
+  const [theme, setTheme] = useState<"dark" | "light">("dark");
+  const [showCopyOneDrive, setShowCopyOneDrive] = useState(false);
+  const [showCopyDrive, setShowCopyDrive] = useState(false);
+
+  const { user, loading } = useAuth();
+  const router = useRouter();
+
+  // Semua konstanta warna didefinisikan setelah deklarasi theme
+  const colorCardBg = theme === 'dark' ? 'rgba(36, 41, 54, 0.82)' : 'rgba(255,255,255,0.96)';
+  const colorMainBg = theme === 'dark'
+    ? ('linear-gradient(120deg,#18181b 60%,#23272f 100%)' as string)
+    : ('linear-gradient(120deg,#eef2ff 60%,#f5f7fb 100%)' as string);
+  const colorText = theme === 'dark' ? '#f3f4f6' : '#22223b';
+  const colorLabel = theme === 'dark' ? colorAccentSoft : colorAccent;
+  const colorInputBg = theme === 'dark' ? 'rgba(36,41,54,0.92)' : '#fff';
+  const colorInputBorder = theme === 'dark' ? colorAccentSoft : colorAccent;
+  const colorShadow = theme === 'dark'
+    ? '0 2px 8px 0 rgba(0,0,0,0.25)'
+    : '0 2px 8px 0 rgba(0,0,0,0.08)';
+  const colorGlassBorder = theme === 'dark'
+    ? 'rgba(255,255,255,0.08)'
+    : 'rgba(36,41,54,0.08)';
+  const colorGlassShadow = theme === 'dark'
+    ? '0 2px 8px 0 rgba(0,0,0,0.32)'
+    : '0 2px 8px 0 rgba(0,0,0,0.12)';
+
+  useEffect(() => {
+    if (!loading && !user) {
+      router.push("/login");
+    }
+  }, [user, loading, router]);
+
+  useEffect(() => {
+    async function fetchChecklist() {
+      const snap = await getDoc(checklistDoc);
+      if (snap.exists()) {
+        const data = snap.data();
+        if (Array.isArray(data.penulisanList)) setPenulisanList(data.penulisanList);
+        if (Array.isArray(data.tugasList)) setTugasList(data.tugasList);
+        if (Array.isArray(data.berkasList)) setBerkasList(data.berkasList);
+        if (typeof data.onedrive === "string") setOnedrive(data.onedrive);
+        if (typeof data.drive === "string") setDrive(data.drive);
+      }
+    }
+    fetchChecklist();
+
+    if (typeof window !== "undefined") {
+      setTheme(document.body.getAttribute("data-theme") === "light" ? "light" : "dark");
+    }
+  }, []);
+
+  // Checklist Penulisan Actions
+  async function handlePenulisanCheck(idx: number) {
+    const updated = [...penulisanList];
+    updated[idx].checked = !updated[idx].checked;
+    setPenulisanList(updated);
+    await setDoc(checklistDoc, { penulisanList: updated, tugasList, berkasList, onedrive, drive }, { merge: true });
+  }
+  async function handlePenulisanAdd() {
+    if (newPenulisan.trim()) {
+      const updated = [...penulisanList, { id: uuidv4(), text: newPenulisan, checked: false }];
+      setPenulisanList(updated);
+      setNewPenulisan("");
+      await setDoc(checklistDoc, { penulisanList: updated, tugasList, berkasList, onedrive, drive }, { merge: true });
+    }
+  }
+  function startEditPenulisan(item: ChecklistItem) {
+    setEditPenulisanId(item.id);
+    setEditPenulisanText(item.text);
+  }
+  async function handlePenulisanEditSave() {
+    if (editPenulisanId && editPenulisanText.trim()) {
+      const updated = penulisanList.map(i =>
+        i.id === editPenulisanId ? { ...i, text: editPenulisanText } : i
+      );
+      setPenulisanList(updated);
+      setEditPenulisanId(null);
+      setEditPenulisanText("");
+      await setDoc(checklistDoc, { penulisanList: updated, tugasList, berkasList, onedrive, drive }, { merge: true });
+    }
+  }
+  async function handlePenulisanDelete(id: string) {
+    const updated = penulisanList.filter(i => i.id !== id);
+    setPenulisanList(updated);
+    await setDoc(checklistDoc, { penulisanList: updated, tugasList, berkasList, onedrive, drive }, { merge: true });
+  }
+
+  // Checklist Tugas Actions
+  async function handleTugasCheck(idx: number) {
+    const updated = [...tugasList];
+    updated[idx].checked = !updated[idx].checked;
+    setTugasList(updated);
+    await setDoc(checklistDoc, { penulisanList, tugasList: updated, berkasList, onedrive, drive }, { merge: true });
+  }
+  async function handleTugasAdd() {
+    if (newTugas.trim()) {
+      const updated = [...tugasList, { id: uuidv4(), text: newTugas, checked: false }];
+      setTugasList(updated);
+      setNewTugas("");
+      await setDoc(checklistDoc, { penulisanList, tugasList: updated, berkasList, onedrive, drive }, { merge: true });
+    }
+  }
+  function startEditTugas(item: ChecklistItem) {
+    setEditTugasId(item.id);
+    setEditTugasText(item.text);
+  }
+  async function handleTugasEditSave() {
+    if (editTugasId && editTugasText.trim()) {
+      const updated = tugasList.map(i =>
+        i.id === editTugasId ? { ...i, text: editTugasText } : i
+      );
+      setTugasList(updated);
+      setEditTugasId(null);
+      setEditTugasText("");
+      await setDoc(checklistDoc, { penulisanList, tugasList: updated, berkasList, onedrive, drive }, { merge: true });
+    }
+  }
+  async function handleTugasDelete(id: string) {
+    const updated = tugasList.filter(i => i.id !== id);
+    setTugasList(updated);
+    await setDoc(checklistDoc, { penulisanList, tugasList: updated, berkasList, onedrive, drive }, { merge: true });
+  }
+
+  // Checklist Berkas Actions
+  async function handleBerkasCheck(idx: number) {
+    const updated = [...berkasList];
+    updated[idx].checked = !updated[idx].checked;
+    setBerkasList(updated);
+    await setDoc(checklistDoc, { penulisanList, tugasList, berkasList: updated, onedrive, drive }, { merge: true });
+  }
+  async function handleBerkasAdd() {
+    if (newBerkas.trim()) {
+      const updated = [...berkasList, { id: uuidv4(), text: newBerkas, checked: false }];
+      setBerkasList(updated);
+      setNewBerkas("");
+      await setDoc(checklistDoc, { penulisanList, tugasList, berkasList: updated, onedrive, drive }, { merge: true });
+    }
+  }
+  function startEditBerkas(item: ChecklistItem) {
+    setEditBerkasId(item.id);
+    setEditBerkasText(item.text);
+  }
+  async function handleBerkasEditSave() {
+    if (editBerkasId && editBerkasText.trim()) {
+      const updated = berkasList.map(i =>
+        i.id === editBerkasId ? { ...i, text: editBerkasText } : i
+      );
+      setBerkasList(updated);
+      setEditBerkasId(null);
+      setEditBerkasText("");
+      await setDoc(checklistDoc, { penulisanList, tugasList, berkasList: updated, onedrive, drive }, { merge: true });
+    }
+  }
+  async function handleBerkasDelete(id: string) {
+    const updated = berkasList.filter(i => i.id !== id);
+    setBerkasList(updated);
+    await setDoc(checklistDoc, { penulisanList, tugasList, berkasList: updated, onedrive, drive }, { merge: true });
+  }
+
+  // Upload Berkas (Firebase Storage)
+  async function handleBerkasUpload(id: string, file: File) {
+    setUploadingId(id);
+    setUploadError(null);
+    try {
+      const storageRef = ref(storage, `berkas_ta/${id}_${file.name}`);
+      await uploadBytes(storageRef, file);
+      const url = await getDownloadURL(storageRef);
+      const updated = berkasList.map(item =>
+        item.id === id ? { ...item, fileUrl: url, fileName: file.name } : item
+      );
+      setBerkasList(updated);
+      await setDoc(checklistDoc, { penulisanList, tugasList, berkasList: updated, onedrive, drive }, { merge: true });
+    } catch (err: any) {
+      setUploadError("Gagal upload berkas.");
+    }
+    setUploadingId(null);
+  }
+  async function handleBerkasRemoveFile(id: string) {
+    const updated = berkasList.map(item =>
+      item.id === id ? { ...item, fileUrl: undefined, fileName: undefined } : item
+    );
+    setBerkasList(updated);
+    await setDoc(checklistDoc, { penulisanList, tugasList, berkasList: updated, onedrive, drive }, { merge: true });
+  }
+
+  // OneDrive & Drive
+  async function handleOnedriveChange(val: string) {
+    setOnedrive(val);
+    await setDoc(checklistDoc, { penulisanList, tugasList, berkasList, onedrive: val, drive }, { merge: true });
+  }
+  async function handleDriveChange(val: string) {
+    setDrive(val);
+    await setDoc(checklistDoc, { penulisanList, tugasList, berkasList, onedrive, drive: val }, { merge: true });
+  }
+  function handleCopyOneDrive() {
+    if (onedrive) {
+      navigator.clipboard.writeText(onedrive);
+      setShowCopyOneDrive(true);
+      setTimeout(() => setShowCopyOneDrive(false), 1500);
+    }
+  }
+  function handleCopyDrive() {
+    if (drive) {
+      navigator.clipboard.writeText(drive);
+      setShowCopyDrive(true);
+      setTimeout(() => setShowCopyDrive(false), 1500);
+    }
+  }
+
+  // Style helpers
+  const cardStyle = {
+    background: theme === "dark" ? "#23272f" : "#fff",
+    borderRadius: "18px",
+    boxShadow: theme === "dark"
+      ? "0 8px 32px rgba(99,102,241,0.18)"
+      : "0 8px 32px rgba(99,102,241,0.10)",
+    padding: "1.7em 2em",
+    marginBottom: "2em",
+    color: theme === "dark" ? "#f3f4f6" : "#222",
+    border: theme === "dark" ? "1.5px solid #353a47" : "none",
+  };
+
+  const btn = {
+    background: "#6366f1",
+    color: "#fff",
+    border: "none",
+    borderRadius: "6px",
+    padding: "0.3em 0.9em",
+    fontWeight: 500,
+    cursor: "pointer",
+    fontSize: "1em"
+  };
+  const btnRed = {
+    ...btn,
+    background: "#ef4444",
+  };
+  const btnGray = {
+    ...btn,
+    background: "#a5b4fc",
+    color: "#23272f",
+  };
+
+  // ----- Checklist Item Layout -----
+  function renderChecklistList({
+    list,
+    onCheck,
+    onEdit,
+    onDelete,
+    editId,
+    editText,
+    setEditText,
+    onEditSave,
+    setEditId,
+    placeholder,
+    newValue,
+    setNewValue,
+    onAdd,
+  }: {
+    list: ChecklistItem[];
+    onCheck: (idx: number) => void;
+    onEdit: (item: ChecklistItem) => void;
+    onDelete: (id: string) => void;
+    editId: string | null;
+    editText: string;
+    setEditText: (txt: string) => void;
+    onEditSave: () => void;
+    setEditId: typeof setEditPenulisanId | typeof setEditTugasId | typeof setEditBerkasId;
+    placeholder: string;
+    newValue: string;
+    setNewValue: (txt: string) => void;
+    onAdd: () => void;
+  }) {
+    return (
+      <>
+        <ul style={{
+          listStyle: "none",
+          padding: 0,
+          marginBottom: "1em",
+        }}>
+          {list.map((item, i) => (
+            <li key={item.id} style={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "flex-start",
+              marginBottom: "1.3em",
+              background: item.checked
+                ? (theme === "dark" ? "#23272f" : "#e0e7ff")
+                : (theme === "dark" ? "#23272f" : "#fff"),
+              borderRadius: "10px",
+              padding: "1em",
+              boxShadow: item.checked
+                ? "0 4px 16px rgba(99,102,241,0.15)"
+                : "0 2px 8px rgba(99,102,241,0.05)",
+              border: item.checked
+                ? "1.5px solid #6366f1"
+                : "1px solid #353a47",
+              color: theme === "dark" ? "#f3f4f6" : "#222",
+              transition: "box-shadow 0.2s, background 0.2s"
+            }}>
+              <div style={{ display: "flex", alignItems: "center", width: "100%" }}>
+                <input
+                  type="checkbox"
+                  checked={item.checked}
+                  onChange={() => onCheck(i)}
+                  style={{
+                    marginRight: "1em",
+                    accentColor: "#6366f1",
+                    width: "1.2em",
+                    height: "1.2em",
+                  }}
+                />
+                {editId === item.id ? (
+                  <>
+                    <input
+                      type="text"
+                      value={editText}
+                      onChange={e => setEditText(e.target.value)}
+                      style={{
+                        flex: 1,
+                        marginRight: "0.5em",
+                        padding: "0.5em",
+                        borderRadius: "6px",
+                        border: "1px solid #6366f1"
+                      }}
+                    />
+                    <button onClick={onEditSave}
+                      style={{ ...btn, marginRight: "0.3em" }}>Simpan</button>
+                    <button onClick={() => setEditId(null)}
+                      style={btnGray}>Batal</button>
+                  </>
+                ) : (
+                  <>
+                    <span style={{ flex: 1, fontWeight: 500, fontSize: "1.08em" }}>{item.text}</span>
+                    <button onClick={() => onEdit(item)}
+                      style={{ ...btn, marginRight: "0.3em" }}>Edit</button>
+                    <button onClick={() => onDelete(item.id)}
+                      style={btnRed}>Hapus</button>
+                  </>
+                )}
+              </div>
+            </li>
+          ))}
+        </ul>
+        <div style={{ display: "flex", gap: "0.6em", marginTop: "0.5em" }}>
+          <input
+            type="text"
+            value={newValue}
+            onChange={e => setNewValue(e.target.value)}
+            placeholder={placeholder}
+            style={{
+              flex: 1,
+              padding: "0.7em",
+              borderRadius: "8px",
+              border: "1.5px solid #6366f1",
+              fontSize: "1em"
+            }}
+          />
+          <button
+            onClick={onAdd}
+            style={{
+              ...btn,
+              padding: "0.7em 1.2em",
+              fontWeight: 500,
+            }}
+          >
+            +
+          </button>
+        </div>
+      </>
+    );
+  }
+
+  // Responsive style for mobile
+  const responsiveStyle = `
+    @media (max-width: 600px) {
+      body {
+        padding: 0 !important;
+      }
+      main {
+        padding: 0.7rem !important;
+        max-width: 100vw !important;
+        margin-top: 0.5rem !important;
+        border-radius: 0 !important;
+        min-height: 90vh !important;
+      }
+      header {
+        padding: 0.7rem 1rem !important;
+        font-size: 1em !important;
+      }
+      .nav-link, .theme-toggle-btn {
+        font-size: 1em !important;
+        padding: 0.2em 0.5em !important;
+      }
+      h1 {
+        font-size: 1.3em !important;
+      }
+      h2 {
+        font-size: 1.1em !important;
+      }
+      [data-section-style], [data-card-style] {
+        padding: 1em 0.5em !important;
+        max-width: 100vw !important;
+        border-radius: 10px !important;
+      }
+      .main-menu-cards {
+        flex-direction: column !important;
+        gap: 1em !important;
+        min-width: 0 !important;
+        max-width: 100vw !important;
+      }
+      .main-menu-cards a {
+        min-width: 0 !important;
+        max-width: 100vw !important;
+        font-size: 1em !important;
+        padding: 1em 0.5em !important;
+      }
+      .checklist-section, .progress-section, .jadwal-section {
+        padding: 1em 0.5em !important;
+        max-width: 100vw !important;
+      }
+    }
+  `;
+
   if (loading || !user) return <div>Loading...</div>;
 
   return (
