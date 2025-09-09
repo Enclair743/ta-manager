@@ -1,0 +1,10 @@
+{
+  "/_not-found": "app/_not-found.js",
+  "/catatan/page": "app/catatan/page.js",
+  "/kalender/page": "app/kalender/page.js",
+  "/login/page": "app/login/page.js",
+  "/page": "app/page.js",
+  "/dashboard/page": "app/dashboard/page.js",
+  "/penulisan/page": "app/penulisan/page.js",
+  "/referensi/page": "app/referensi/page.js"
+}
