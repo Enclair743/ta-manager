@@ -208,6 +208,31 @@ export default function ReferensiPage() {
   const router = useRouter();
   const db = getFirestore(app);
 
+  // Color palette mirip dashboard/catatan
+  const colorAccent = '#7c3aed';
+  const colorAccentLight = '#c7d2fe';
+  const colorAccentSoft = '#a5b4fc';
+  const colorAccentWarn = '#f59e42';
+  const colorDanger = '#ef4444';
+  const colorSuccess = '#34d399';
+  const colorCardBg = theme === 'dark' ? 'rgba(36, 41, 54, 0.82)' : 'rgba(255,255,255,0.96)';
+  const colorMainBg = theme === 'dark'
+    ? ('linear-gradient(120deg,#18181b 60%,#23272f 100%)' as string)
+    : ('linear-gradient(120deg,#eef2ff 60%,#f5f7fb 100%)' as string);
+  const colorText = theme === 'dark' ? '#f3f4f6' : '#22223b';
+  const colorLabel = theme === 'dark' ? colorAccentSoft : colorAccent;
+  const colorInputBg = theme === 'dark' ? 'rgba(36,41,54,0.92)' : '#fff';
+  const colorInputBorder = theme === 'dark' ? colorAccentSoft : colorAccent;
+  const colorShadow = theme === 'dark'
+    ? '0 6px 20px rgba(124,58,237,0.12)'
+    : '0 6px 20px rgba(124,58,237,0.07)';
+  const colorGlassBorder = theme === 'dark'
+    ? '1.5px solid rgba(124,58,237,0.28)'
+    : '1.5px solid #7c3aed';
+  const colorGlassShadow = theme === 'dark'
+    ? '0 8px 32px rgba(124,58,237,0.22)'
+    : '0 8px 32px rgba(124,58,237,0.09)';
+
   useEffect(() => {
     if (!loading && !user) {
       router.push("/login");
@@ -344,12 +369,70 @@ export default function ReferensiPage() {
 
   if (loading || !user) return <div>Loading...</div>;
 
+  // Responsive style for mobile
+  const responsiveStyle = `
+    @media (max-width: 600px) {
+      body {
+        padding: 0 !important;
+      }
+      main {
+        padding: 0.7rem !important;
+        max-width: 100vw !important;
+        margin-top: 0.5rem !important;
+        border-radius: 0 !important;
+        min-height: 90vh !important;
+      }
+      header {
+        padding: 0.7rem 1rem !important;
+        font-size: 1em !important;
+      }
+      .nav-link, .theme-toggle-btn {
+        font-size: 1em !important;
+        padding: 0.2em 0.5em !important;
+      }
+      h1 {
+        font-size: 1.3em !important;
+      }
+      h2 {
+        font-size: 1.1em !important;
+      }
+      [data-section-style], [data-card-style] {
+        padding: 1em 0.5em !important;
+        max-width: 100vw !important;
+        border-radius: 10px !important;
+      }
+      .main-menu-cards {
+        flex-direction: column !important;
+        gap: 1em !important;
+        min-width: 0 !important;
+        max-width: 100vw !important;
+      }
+      .main-menu-cards a {
+        min-width: 0 !important;
+        max-width: 100vw !important;
+        font-size: 1em !important;
+        padding: 1em 0.5em !important;
+      }
+      .checklist-section, .progress-section, .jadwal-section {
+        padding: 1em 0.5em !important;
+        max-width: 100vw !important;
+      }
+    }
+  `;
+
   return (
-    <div>
+    <div style={{ background: colorMainBg }}>
+      <style>{responsiveStyle}</style>
       <h1 style={{
         fontSize: "1.5rem",
         marginBottom: "1em",
-        color: theme === "dark" ? "#f3f4f6" : "#222"
+        color: colorAccent,
+        background: theme === 'dark'
+          ? ('linear-gradient(90deg,#c7d2fe,#7c3aed)' as string)
+          : ('linear-gradient(90deg,#7c3aed,#a5b4fc)' as string),
+        backgroundClip: "text",
+        WebkitBackgroundClip: "text",
+        WebkitTextFillColor: "transparent"
       }}>Referensi</h1>
       <div style={{
         display: "flex", gap: "1em", marginBottom: "1.2em", alignItems: "center"

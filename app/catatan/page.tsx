@@ -203,16 +203,62 @@ export default function CatatanTiptapPage() {
     }
   }, [user, loading, router]);
 
+  // Responsive style for mobile
+  const responsiveStyle = `
+    @media (max-width: 600px) {
+      body {
+        padding: 0 !important;
+      }
+      main {
+        padding: 0.7rem !important;
+        max-width: 100vw !important;
+        margin-top: 0.5rem !important;
+        border-radius: 0 !important;
+        min-height: 90vh !important;
+      }
+      header {
+        padding: 0.7rem 1rem !important;
+        font-size: 1em !important;
+      }
+      .nav-link, .theme-toggle-btn {
+        font-size: 1em !important;
+        padding: 0.2em 0.5em !important;
+      }
+      h1 {
+        font-size: 1.3em !important;
+      }
+      h2 {
+        font-size: 1.1em !important;
+      }
+      [data-section-style], [data-card-style] {
+        padding: 1em 0.5em !important;
+        max-width: 100vw !important;
+        border-radius: 10px !important;
+      }
+      .main-menu-cards {
+        flex-direction: column !important;
+        gap: 1em !important;
+        min-width: 0 !important;
+        max-width: 100vw !important;
+      }
+      .main-menu-cards a {
+        min-width: 0 !important;
+        max-width: 100vw !important;
+        font-size: 1em !important;
+        padding: 1em 0.5em !important;
+      }
+      .checklist-section, .progress-section, .jadwal-section {
+        padding: 1em 0.5em !important;
+        max-width: 100vw !important;
+      }
+    }
+  `;
+
   if (loading || !user) return <div>Loading...</div>;
 
   return (
-    <div style={{
-      minHeight: "100vh",
-      background: colorMainBg as string,
-      fontFamily: "Inter, Segoe UI, sans-serif",
-      paddingBottom: "4rem",
-      transition: "background 0.5s"
-    }}>
+    <div style={{ minHeight: "100vh", background: colorMainBg as string, fontFamily: "Inter, Segoe UI, sans-serif", paddingBottom: "4rem", transition: "background 0.5s" }}>
+      <style>{responsiveStyle}</style>
       <div style={{
         maxWidth: 820,
         margin: "2.5rem auto",

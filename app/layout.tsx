@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { AuthCalendarProvider } from "../src/context/AuthCalendarContext";
+import { AuthProvider } from "../src/context/AuthContext";
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   const [theme, setTheme] = useState<"dark" | "light">("dark");
@@ -45,6 +46,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="id">
       <head>
+        {/* Google Identity Services script for OAuth */}
+        <script src="https://accounts.google.com/gsi/client" async defer></script>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet" />
@@ -77,55 +80,57 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         `}</style>
       </head>
       <body data-theme={theme} style={bodyStyle}>
-        <AuthCalendarProvider>
-          <header style={{
-            padding: "1rem 2rem",
-            borderBottom: theme === "dark" ? "1px solid #23272f" : "1px solid #ddd",
-            background: theme === "dark" ? "#18181b" : "#fff",
-            position: "sticky",
-            top: 0,
-            zIndex: 10,
-            boxShadow: theme === "dark" ? "0 2px 8px rgba(0,0,0,0.12)" : "0 2px 8px rgba(0,0,0,0.03)",
-            display: "flex",
-            alignItems: "center"
-          }}>
-            <nav style={{
+        <AuthProvider>
+          <AuthCalendarProvider>
+            <header style={{
+              padding: "1rem 2rem",
+              borderBottom: theme === "dark" ? "1px solid #23272f" : "1px solid #ddd",
+              background: theme === "dark" ? "#18181b" : "#fff",
+              position: "sticky",
+              top: 0,
+              zIndex: 10,
+              boxShadow: theme === "dark" ? "0 2px 8px rgba(0,0,0,0.12)" : "0 2px 8px rgba(0,0,0,0.03)",
               display: "flex",
-              gap: "1.5rem",
-              fontWeight: 500,
-              fontSize: "1.1em"
+              alignItems: "center"
             }}>
-              {[
-                { href: "/dashboard", label: "Dashboard" },
-                { href: "/penulisan", label: "Penulisan" },
-                { href: "/catatan", label: "Catatan" },
-                { href: "/referensi", label: "Referensi" },
-                { href: "/kalender", label: "Kalender" }
-              ].map(link => (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  className="nav-link"
-                >
-                  {link.label}
-                </Link>
-              ))}
-            </nav>
-            <button
-              className="theme-toggle-btn"
-              aria-label="Toggle theme"
-              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-              style={{
-                marginLeft: "auto"
-              }}
-            >
-              {theme === "dark" ? "🌞" : "🌙"}
-            </button>
-          </header>
-          <main style={mainStyle}>
-            {children}
-          </main>
-        </AuthCalendarProvider>
+              <nav style={{
+                display: "flex",
+                gap: "1.5rem",
+                fontWeight: 500,
+                fontSize: "1.1em"
+              }}>
+                {[
+                  { href: "/dashboard", label: "Dashboard" },
+                  { href: "/penulisan", label: "Penulisan" },
+                  { href: "/catatan", label: "Catatan" },
+                  { href: "/referensi", label: "Referensi" },
+                  { href: "/kalender", label: "Kalender" }
+                ].map(link => (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    className="nav-link"
+                  >
+                    {link.label}
+                  </Link>
+                ))}
+              </nav>
+              <button
+                className="theme-toggle-btn"
+                aria-label="Toggle theme"
+                onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+                style={{
+                  marginLeft: "auto"
+                }}
+              >
+                {theme === "dark" ? "🌞" : "🌙"}
+              </button>
+            </header>
+            <main style={mainStyle}>
+              {children}
+            </main>
+          </AuthCalendarProvider>
+        </AuthProvider>
       </body>
     </html>
   );

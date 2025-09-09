@@ -1,20 +1,14 @@
-import { createContext, useContext, useState, ReactNode } from "react";
+import { createContext, useContext, useState, ReactNode, Dispatch, SetStateAction } from "react";
 
-// Definisikan tipe data context
-interface AuthCalendarContextType {
+// Context untuk menyimpan user dan accessToken kalender
+export interface AuthCalendarContextType {
   user: any;
-  setUser: (user: any) => void;
+  setUser: Dispatch<SetStateAction<any>>;
   calendarToken: string | null;
-  setCalendarToken: (token: string | null) => void;
+  setCalendarToken: Dispatch<SetStateAction<string | null>>;
 }
 
-// Inisialisasi context dengan default value yang sesuai tipe
-export const AuthCalendarContext = createContext<AuthCalendarContextType>({
-  user: null,
-  setUser: () => {},
-  calendarToken: null,
-  setCalendarToken: () => {},
-});
+export const AuthCalendarContext = createContext<AuthCalendarContextType | undefined>(undefined);
 
 export function AuthCalendarProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<any>(null);
@@ -27,4 +21,10 @@ export function AuthCalendarProvider({ children }: { children: ReactNode }) {
   );
 }
 
-export const useAuthCalendar = () => useContext(AuthCalendarContext);
+export const useAuthCalendar = () => {
+  const context = useContext(AuthCalendarContext);
+  if (!context) {
+    throw new Error("useAuthCalendar must be used within an AuthCalendarProvider");
+  }
+  return context;
+};

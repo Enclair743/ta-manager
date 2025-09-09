@@ -4,8 +4,13 @@ import app from "../firebase";
 import { getFirestore, doc, getDoc } from "firebase/firestore";
 import { useAuth } from "../../src/context/AuthContext";
 import { useRouter } from "next/navigation";
+import { useAuthCalendar } from "../../src/context/AuthCalendarContext";
 
 export default function DashboardPage() {
+  const authCalendar = useAuthCalendar();
+  if (!authCalendar) return <div>Gagal mendapatkan context. Silakan reload halaman.</div>;
+  const { user, calendarToken } = authCalendar;
+
   const [theme, setTheme] = useState<"dark" | "light">("dark");
   const [judul, setJudul] = useState("Judul Tugas Akhir");
   const [pembimbing1, setPembimbing1] = useState("");
@@ -17,10 +22,40 @@ export default function DashboardPage() {
   const [penulisanList, setPenulisanList] = useState<any[]>([]);
   const [tugasList, setTugasList] = useState<any[]>([]);
   const [berkasList, setBerkasList] = useState<any[]>([]);
+  const [calendarEvents, setCalendarEvents] = useState<any[]>([]);
+  const [calendarLoading, setCalendarLoading] = useState(false);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
   const db = getFirestore(app);
   const checklistDoc = doc(db, "penulisan", "checklist");
-  const { user, loading } = useAuth();
+  const { loading } = useAuth();
   const router = useRouter();
+
+  // Color palette mirip page catatan
+  const colorAccent = '#7c3aed'; // Ungu (accent utama)
+  const colorAccentLight = '#c7d2fe'; // Untuk mode terang
+  const colorAccentSoft = '#a5b4fc'; // Untuk border dan shadow di light
+  const colorAccentWarn = '#f59e42'; // Orange
+  const colorDanger = '#ef4444';
+  const colorSuccess = '#34d399';
+  const colorCardBg = theme === 'dark'
+    ? 'rgba(36, 41, 54, 0.82)'
+    : 'rgba(255,255,255,0.96)';
+  const colorMainBg = theme === 'dark'
+    ? ('linear-gradient(120deg,#18181b 60%,#23272f 100%)' as string)
+    : ('linear-gradient(120deg,#eef2ff 60%,#f5f7fb 100%)' as string);
+  const colorText = theme === 'dark' ? '#f3f4f6' : '#22223b';
+  const colorLabel = theme === 'dark' ? colorAccentSoft : colorAccent;
+  const colorInputBg = theme === 'dark' ? 'rgba(36,41,54,0.92)' : '#fff';
+  const colorInputBorder = theme === 'dark' ? colorAccentSoft : colorAccent;
+  const colorShadow = theme === 'dark'
+    ? '0 6px 20px rgba(124,58,237,0.12)'
+    : '0 6px 20px rgba(124,58,237,0.07)';
+  const colorGlassBorder = theme === 'dark'
+    ? '1.5px solid rgba(124,58,237,0.28)'
+    : '1.5px solid #7c3aed';
+  const colorGlassShadow = theme === 'dark'
+    ? '0 8px 32px rgba(124,58,237,0.22)'
+    : '0 8px 32px rgba(124,58,237,0.09)';
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -42,6 +77,59 @@ export default function DashboardPage() {
     fetchChecklist();
   }, [checklistDoc]);
 
+  useEffect(() => {
+    async function fetchUserEmail() {
+      if (!calendarToken) return;
+      try {
+        const res = await fetch("https://www.googleapis.com/oauth2/v3/userinfo", {
+          headers: { Authorization: `Bearer ${calendarToken}` },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setUserEmail(data.email || null);
+        } else {
+          setUserEmail(null);
+        }
+      } catch {
+        setUserEmail(null);
+      }
+    }
+    async function fetchEvents() {
+      if (!calendarToken) return;
+      setCalendarLoading(true);
+      try {
+        const now = new Date();
+        const timeMin = encodeURIComponent(now.toISOString());
+        const res = await fetch(
+          `https://www.googleapis.com/calendar/v3/calendars/primary/events?orderBy=startTime&singleEvents=true&timeMin=${timeMin}&maxResults=10`,
+          {
+            headers: {
+              Authorization: `Bearer ${calendarToken}`,
+            },
+          }
+        );
+        if (res.status === 401) {
+          setCalendarEvents([]);
+          setUserEmail(null);
+          setCalendarLoading(false);
+          return;
+        }
+        const data = await res.json();
+        setCalendarEvents((data.items || []).filter(ev => typeof ev.description === "string" && ev.description.replace(/\s+/g, "").includes("__FROM_APP__")));
+      } catch {
+        setCalendarEvents([]);
+      }
+      setCalendarLoading(false);
+    }
+    if (calendarToken) {
+      fetchUserEmail();
+      fetchEvents();
+    } else {
+      setCalendarEvents([]);
+      setUserEmail(null);
+    }
+  }, [calendarToken]);
+
   // Proteksi login
   useEffect(() => {
     if (!loading && !user) {
@@ -50,6 +138,15 @@ export default function DashboardPage() {
   }, [user, loading, router]);
 
   if (loading || !user) return <div>Loading...</div>;
+
+  // Format tanggal dan waktu
+  function formatDateTime24(dt: string) {
+    if (!dt) return "";
+    const d = new Date(dt);
+    if (isNaN(d.getTime())) return dt;
+    const pad = (n: number) => n.toString().padStart(2, "0");
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  }
 
   // Styles
   const cardBg = theme === "dark"
@@ -217,13 +314,72 @@ export default function DashboardPage() {
     setShowEditModal(false);
   }
 
+  // Responsive style for mobile
+  const responsiveStyle = `
+    @media (max-width: 600px) {
+      body {
+        padding: 0 !important;
+      }
+      main {
+        padding: 0.7rem !important;
+        max-width: 100vw !important;
+        margin-top: 0.5rem !important;
+        border-radius: 0 !important;
+        min-height: 90vh !important;
+      }
+      header {
+        padding: 0.7rem 1rem !important;
+        font-size: 1em !important;
+      }
+      .nav-link, .theme-toggle-btn {
+        font-size: 1em !important;
+        padding: 0.2em 0.5em !important;
+      }
+      h1 {
+        font-size: 1.3em !important;
+      }
+      h2 {
+        font-size: 1.1em !important;
+      }
+      [data-section-style], [data-card-style] {
+        padding: 1em 0.5em !important;
+        max-width: 100vw !important;
+        border-radius: 10px !important;
+      }
+      .main-menu-cards {
+        flex-direction: column !important;
+        gap: 1em !important;
+        min-width: 0 !important;
+        max-width: 100vw !important;
+      }
+      .main-menu-cards a {
+        min-width: 0 !important;
+        max-width: 100vw !important;
+        font-size: 1em !important;
+        padding: 1em 0.5em !important;
+      }
+      .checklist-section, .progress-section, .jadwal-section {
+        padding: 1em 0.5em !important;
+        max-width: 100vw !important;
+      }
+    }
+  `;
+
+  // Konten dashboard utama
   return (
-    <div style={{ fontFamily: "Inter, Roboto, Arial, sans-serif" }}>
+    <div style={{ fontFamily: "Inter, Roboto, Arial, sans-serif", background: colorMainBg }}>
+      <style>{responsiveStyle}</style>
       <h1 style={{
         fontSize: "2.1em",
         fontWeight: 800,
         margin: "0 auto 1.1em auto",
-        color: cardText,
+        color: colorAccent,
+        background: theme === 'dark'
+          ? ('linear-gradient(90deg,#c7d2fe,#7c3aed)' as string)
+          : ('linear-gradient(90deg,#7c3aed,#a5b4fc)' as string),
+        backgroundClip: "text",
+        WebkitBackgroundClip: "text",
+        WebkitTextFillColor: "transparent",
         textAlign: "center"
       }}>
         Dashboard Tugas Akhir
@@ -277,63 +433,68 @@ export default function DashboardPage() {
       )}
 
       {/* Card Judul & Pembimbing */}
-      <div style={sectionStyle}>
+      <div style={{ ...sectionStyle, background: colorCardBg, color: colorText, boxShadow: colorGlassShadow, border: colorGlassBorder }}>
         <div>
           <h2 style={{
             fontWeight: 700,
             fontSize: "1.5em",
-            marginBottom: "0.6em",
+            marginBottom: "0.8em",
             color: cardText
           }}>{judul}</h2>
           <div style={{
-            color: cardText,
-            fontSize: "1.12em",
-            marginBottom: "0.3em",
             display: "flex",
-            alignItems: "center",
-            gap: "0.5em"
+            flexDirection: "column",
+            gap: "0.7em",
+            marginBottom: "1.2em"
           }}>
-            <span style={{
-              background: "#6366f1",
-              color: "#fff",
-              borderRadius: "8px",
-              padding: "2px 12px",
-              fontSize: "0.93em",
-              fontWeight: 600
-            }}>Pembimbing 1</span>
-            <span><b>{pembimbing1 || <span style={{ color: "#aaa" }}>Belum diisi</span>}</b></span>
+            <div style={{ display: "flex", alignItems: "center", gap: "0.7em" }}>
+              <span style={{
+                background: "#6366f1",
+                color: "#fff",
+                borderRadius: "8px",
+                padding: "6px 18px",
+                fontSize: "1em",
+                fontWeight: 600,
+                minWidth: 120,
+                textAlign: "center"
+              }}>Pembimbing 1</span>
+              <span style={{ fontWeight: 500, color: pembimbing1 ? cardText : "#aaa", fontSize: "1.08em" }}>
+                {pembimbing1 || "Belum diisi"}
+              </span>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: "0.7em" }}>
+              <span style={{
+                background: "#6366f1",
+                color: "#fff",
+                borderRadius: "8px",
+                padding: "6px 18px",
+                fontSize: "1em",
+                fontWeight: 600,
+                minWidth: 120,
+                textAlign: "center"
+              }}>Pembimbing 2</span>
+              <span style={{ fontWeight: 500, color: pembimbing2 ? cardText : "#aaa", fontSize: "1.08em" }}>
+                {pembimbing2 || "Belum diisi"}
+              </span>
+            </div>
           </div>
-          <div style={{
-            color: cardText,
-            fontSize: "1.12em",
-            marginBottom: "0.7em",
-            display: "flex",
-            alignItems: "center",
-            gap: "0.5em"
-          }}>
-            <span style={{
-              background: "#6366f1",
-              color: "#fff",
-              borderRadius: "8px",
-              padding: "2px 12px",
-              fontSize: "0.93em",
-              fontWeight: 600
-            }}>Pembimbing 2</span>
-            <span><b>{pembimbing2 || <span style={{ color: "#aaa" }}>Belum diisi</span>}</b></span>
-          </div>
-          <button style={buttonPrimary} onClick={openEditModal}>Edit Data</button>
+          <button style={{ ...buttonPrimary, marginTop: "0.5em", width: 140 }} onClick={openEditModal}>Edit Data</button>
         </div>
       </div>
 
       {/* Main Menu Cards */}
       <div style={{
-        display: "grid",
-        gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))",
-        gap: "2rem",
+        display: "flex",
+        flexDirection: "row",
+        flexWrap: "wrap",
+        gap: "1.5rem",
         marginBottom: "2em",
         maxWidth: 820,
-        margin: "0 auto"
-      }}>
+        margin: "0 auto",
+        justifyContent: "center",
+        alignItems: "stretch",
+        overflowX: "auto"
+      }} className="main-menu-cards">
         {[
           { href: "/penulisan", label: "📝 Penulisan" },
           { href: "/catatan", label: "📒 Catatan" },
@@ -344,8 +505,14 @@ export default function DashboardPage() {
             key={card.href}
             href={card.href}
             style={{
-              display: "block",
-              padding: "2.2em 1.2em",
+              display: "flex",
+              flexDirection: "row",
+              alignItems: "center",
+              justifyContent: "center",
+              minWidth: 200,
+              maxWidth: 260,
+              width: "100%",
+              padding: "1.6em 1em",
               background: cardBg,
               borderRadius: "16px",
               boxShadow: cardShadow,
@@ -353,10 +520,11 @@ export default function DashboardPage() {
               textDecoration: "none",
               color: cardText,
               fontWeight: 700,
-              fontSize: "1.24em",
+              fontSize: "1.18em",
               transition: "box-shadow 0.2s, transform 0.2s, background 0.2s",
               cursor: "pointer",
-              border: `1.5px solid ${borderColor}`
+              border: `1.5px solid ${borderColor}`,
+              margin: "0.5em 0"
             }}
             onMouseOver={e => {
               e.currentTarget.style.boxShadow = theme === "dark"
@@ -379,7 +547,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Checklist Section */}
-      <div style={sectionStyle}>
+      <div style={{ ...sectionStyle }} data-section-style className="checklist-section">
         <h2 style={{ fontSize: "1.32em", fontWeight: 800, marginBottom: "1.1em" }}>Checklist Belum Selesai</h2>
         <div style={{ marginBottom: "1.5em" }}>
           <h3 style={{ fontSize: "1.09em", fontWeight: 700, marginBottom: "0.6em" }}>📝 Penulisan</h3>
@@ -426,7 +594,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Progress Section */}
-      <div style={sectionStyle}>
+      <div style={{ ...sectionStyle }} data-section-style className="progress-section">
         <h2 style={{ fontSize: "1.18em", fontWeight: 800, marginBottom: "1em" }}>Progress Checklist</h2>
         <ProgressBar
           total={penulisanList.length}
@@ -440,6 +608,40 @@ export default function DashboardPage() {
           title="Berkas"
           color="linear-gradient(90deg,#34d399,#6366f1)"
         />
+      </div>
+
+      {/* Jadwal Tugas Akhir dari Kalender */}
+      <div style={{ ...sectionStyle }} data-section-style className="jadwal-section">
+        <h2 style={{ fontSize: "1.22em", fontWeight: 800, marginBottom: "1.1em" }}>Jadwal Tugas Akhir (Google Kalender)</h2>
+        {calendarLoading ? (
+          <div style={{ color: "#888", textAlign: "center", padding: "1em" }}>Mengambil jadwal...</div>
+        ) : calendarEvents.length === 0 ? (
+          <div style={{ color: "#aaa", textAlign: "center", padding: "1em" }}>Tidak ada jadwal tugas akhir</div>
+        ) : (
+          <ul style={{ listStyle: "none", padding: 0 }}>
+            {calendarEvents.map(ev => (
+              <li key={ev.id}
+                  style={{
+                    background: cardBg,
+                    borderRadius: "14px",
+                    marginBottom: "1em",
+                    padding: "1em 1.2em",
+                    boxShadow: cardShadow,
+                    color: cardText,
+                    border: `1px solid ${borderColor}`,
+                    transition: "box-shadow 0.2s, background 0.2s, transform 0.2s"
+                  }}
+              >
+                <div style={{ fontWeight: "bold", fontSize: "1.08em", marginBottom: "0.3em" }}>{ev.summary}</div>
+                <div style={{ color: theme === "dark" ? "#a1a1aa" : "#555", fontSize: "0.98em" }}>
+                  {ev.start?.dateTime ? formatDateTime24(ev.start.dateTime) : ev.start?.date}
+                  {" - "}
+                  {ev.end?.dateTime ? formatDateTime24(ev.end.dateTime) : ev.end?.date}
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
     </div>
   );
