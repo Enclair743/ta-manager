@@ -26,6 +26,12 @@ export default function DashboardPage() {
   const [calendarLoading, setCalendarLoading] = useState(false);
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const db = getFirestore(app);
+
+  // Ganti doc menjadi per user
+  function getDashboardDoc(uid: string) {
+    return doc(db, "dashboard", uid);
+  }
+
   const checklistDoc = doc(db, "penulisan", "checklist");
   const { loading } = useAuth();
   const router = useRouter();
@@ -314,12 +320,10 @@ export default function DashboardPage() {
     setShowEditModal(false);
   }
 
-  // Responsive style for mobile
+  // Responsive style for mobile & tablet
   const responsiveStyle = `
-    @media (max-width: 600px) {
-      body {
-        padding: 0 !important;
-      }
+    @media (max-width: 900px) {
+      body { padding: 0 !important; }
       main {
         padding: 0.7rem !important;
         max-width: 100vw !important;
@@ -335,12 +339,8 @@ export default function DashboardPage() {
         font-size: 1em !important;
         padding: 0.2em 0.5em !important;
       }
-      h1 {
-        font-size: 1.3em !important;
-      }
-      h2 {
-        font-size: 1.1em !important;
-      }
+      h1 { font-size: 1.3em !important; }
+      h2 { font-size: 1.1em !important; }
       [data-section-style], [data-card-style] {
         padding: 1em 0.5em !important;
         max-width: 100vw !important;
@@ -361,6 +361,16 @@ export default function DashboardPage() {
       .checklist-section, .progress-section, .jadwal-section {
         padding: 1em 0.5em !important;
         max-width: 100vw !important;
+      }
+      input, select, button {
+        font-size: 1em !important;
+        min-width: 0 !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+      }
+      .MuiInputBase-root, .MuiFormControl-root {
+        width: 100% !important;
+        min-width: 0 !important;
       }
     }
   `;
