@@ -341,35 +341,15 @@ export default function KalenderPage() {
         padding: 0.7rem 1rem !important;
         font-size: 1em !important;
       }
-      .nav-link, .theme-toggle-btn {
-        font-size: 1em !important;
-        padding: 0.2em 0.5em !important;
-      }
-      h1 { font-size: 1.3em !important; }
-      h2 { font-size: 1.1em !important; }
+      h1 { font-size: 1.15em !important; }
+      h2 { font-size: 1em !important; }
       [data-section-style], [data-card-style] {
-        padding: 1em 0.5em !important;
+        padding: 0.7em 0.3em !important;
         max-width: 100vw !important;
         border-radius: 10px !important;
       }
-      .main-menu-cards {
-        flex-direction: column !important;
-        gap: 1em !important;
-        min-width: 0 !important;
-        max-width: 100vw !important;
-      }
-      .main-menu-cards a {
-        min-width: 0 !important;
-        max-width: 100vw !important;
-        font-size: 1em !important;
-        padding: 1em 0.5em !important;
-      }
-      .checklist-section, .progress-section, .jadwal-section {
-        padding: 1em 0.5em !important;
-        max-width: 100vw !important;
-      }
       input, select, button {
-        font-size: 1em !important;
+        font-size: 0.98em !important;
         min-width: 0 !important;
         width: 100% !important;
         box-sizing: border-box !important;
@@ -377,6 +357,37 @@ export default function KalenderPage() {
       .MuiInputBase-root, .MuiFormControl-root {
         width: 100% !important;
         min-width: 0 !important;
+      }
+      .checklist-section ol li, .progress-section, .jadwal-section ul li {
+        font-size: 0.98em !important;
+        padding: 0.7em 0.7em !important;
+      }
+      .main-menu-cards {
+        flex-direction: column !important;
+        gap: 0.7em !important;
+        min-width: 0 !important;
+        max-width: 100vw !important;
+      }
+      .main-menu-cards a {
+        min-width: 0 !important;
+        max-width: 100vw !important;
+        font-size: 0.98em !important;
+        padding: 1em 0.3em !important;
+        margin: 0.2em 0 !important;
+      }
+    }
+    @media (max-width: 600px) {
+      h1 { font-size: 1em !important; }
+      h2 { font-size: 0.95em !important; }
+      [data-section-style], [data-card-style] {
+        padding: 0.5em 0.1em !important;
+      }
+      .checklist-section, .progress-section, .jadwal-section {
+        padding: 0.5em 0.1em !important;
+      }
+      .checklist-section ol li, .jadwal-section ul li {
+        font-size: 0.95em !important;
+        padding: 0.5em 0.5em !important;
       }
     }
   `;
