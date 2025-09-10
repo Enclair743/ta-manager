@@ -8,6 +8,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   const [theme, setTheme] = useState<"dark" | "light">("dark");
   const [menuOpen, setMenuOpen] = useState(false);
 
+  // Tutup menu saat klik link
+  function handleNavClick() {
+    setMenuOpen(false);
+  }
+
   useEffect(() => {
     const saved = typeof window !== "undefined" ? localStorage.getItem("theme") : null;
     if (saved === "light" || saved === "dark") setTheme(saved as any);
@@ -98,7 +103,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <div style={{ fontWeight: 700, fontSize: "1.2em", color: theme === "dark" ? "#fff" : "#000" }}>
                 TA Manager
               </div>
-              <nav>
+              <nav style={{ position: "relative" }}>
                 <button
                   className="hamburger"
                   style={{
@@ -109,6 +114,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                     color: theme === "dark" ? "#fff" : "#000",
                     cursor: "pointer",
                   }}
+                  aria-label="Buka menu"
                   onClick={() => setMenuOpen(!menuOpen)}
                 >
                   &#9776;
@@ -125,22 +131,21 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                     fontWeight: 600,
                     fontSize: "1.15em",
                     color: theme === "dark" ? "#fff" : "#000",
+                    transition: "all 0.2s",
                   }}
                 >
-                  <li><Link href="/dashboard" className="nav-link">Dashboard</Link></li>
-                  <li><Link href="/penulisan" className="nav-link">Penulisan</Link></li>
-                  <li><Link href="/catatan" className="nav-link">Catatan</Link></li>
-                  <li><Link href="/referensi" className="nav-link">Referensi</Link></li>
-                  <li><Link href="/kalender" className="nav-link">Kalender</Link></li>
+                  <li><Link href="/dashboard" className="nav-link" onClick={handleNavClick}>Dashboard</Link></li>
+                  <li><Link href="/penulisan" className="nav-link" onClick={handleNavClick}>Penulisan</Link></li>
+                  <li><Link href="/catatan" className="nav-link" onClick={handleNavClick}>Catatan</Link></li>
+                  <li><Link href="/referensi" className="nav-link" onClick={handleNavClick}>Referensi</Link></li>
+                  <li><Link href="/kalender" className="nav-link" onClick={handleNavClick}>Kalender</Link></li>
                 </ul>
               </nav>
               <button
                 className="theme-toggle-btn"
                 aria-label="Toggle theme"
                 onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-                style={{
-                  marginLeft: "auto"
-                }}
+                style={{ marginLeft: "auto" }}
               >
                 {theme === "dark" ? "🌞" : "🌙"}
               </button>
@@ -150,14 +155,21 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                     display: ${menuOpen ? "flex" : "none"};
                     flex-direction: column;
                     position: absolute;
-                    top: 60px;
+                    top: 56px;
                     left: 0;
                     right: 0;
                     background: #18181b;
-                    padding: 1em 0;
-                    gap: 1em;
+                    padding: 1em 0.5em;
+                    gap: 0.5em;
                     z-index: 999;
                     font-size: 1.1em;
+                    border-radius: 0 0 12px 12px;
+                    box-shadow: 0 8px 32px rgba(99,102,241,0.18);
+                  }
+                  .nav-link {
+                    width: 100%;
+                    text-align: left;
+                    padding: 0.7em 1em;
                   }
                   .hamburger {
                     display: block !important;
