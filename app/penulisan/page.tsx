@@ -41,7 +41,10 @@ const colorSuccess = '#34d399';
 
 const db = getFirestore(app);
 const storage = getStorage(app);
-const checklistDoc = doc(db, "penulisan", "checklist");
+// Ganti checklistDoc menjadi per user
+function getChecklistDoc(uid: string) {
+  return doc(db, "penulisan", uid);
+}
 
 function PenulisanPage() {
   const [penulisanList, setPenulisanList] = useState<ChecklistItem[]>(defaultPenulisan);
@@ -70,8 +73,40 @@ function PenulisanPage() {
 
   const { user, loading } = useAuth();
   const router = useRouter();
+  const [docRef, setDocRef] = useState<any>(null);
 
-  // Semua konstanta warna didefinisikan setelah deklarasi theme
+  useEffect(() => {
+    if (!loading && user) {
+      setDocRef(getChecklistDoc(user.uid));
+    }
+  }, [user, loading]);
+
+  useEffect(() => {
+    async function fetchChecklist() {
+      if (!docRef) return;
+      const snap = await getDoc(docRef);
+      if (snap.exists()) {
+        const data = snap.data() as {
+          penulisanList?: ChecklistItem[];
+          tugasList?: ChecklistItem[];
+          berkasList?: ChecklistItem[];
+          onedrive?: string;
+          drive?: string;
+        };
+        if (Array.isArray(data.penulisanList)) setPenulisanList(data.penulisanList);
+        if (Array.isArray(data.tugasList)) setTugasList(data.tugasList);
+        if (Array.isArray(data.berkasList)) setBerkasList(data.berkasList);
+        if (typeof data.onedrive === "string") setOnedrive(data.onedrive);
+        if (typeof data.drive === "string") setDrive(data.drive);
+      }
+    }
+    fetchChecklist();
+    if (typeof window !== "undefined") {
+      setTheme(document.body.getAttribute("data-theme") === "light" ? "light" : "dark");
+    }
+  }, [docRef]);
+
+  // Semua konstanta warna didefinisikan setelah deklarasi theme dan state
   const colorCardBg = theme === 'dark' ? 'rgba(36, 41, 54, 0.82)' : 'rgba(255,255,255,0.96)';
   const colorMainBg = theme === 'dark'
     ? ('linear-gradient(120deg,#18181b 60%,#23272f 100%)' as string)
@@ -90,44 +125,19 @@ function PenulisanPage() {
     ? '0 2px 8px 0 rgba(0,0,0,0.32)'
     : '0 2px 8px 0 rgba(0,0,0,0.12)';
 
-  useEffect(() => {
-    if (!loading && !user) {
-      router.push("/login");
-    }
-  }, [user, loading, router]);
-
-  useEffect(() => {
-    async function fetchChecklist() {
-      const snap = await getDoc(checklistDoc);
-      if (snap.exists()) {
-        const data = snap.data();
-        if (Array.isArray(data.penulisanList)) setPenulisanList(data.penulisanList);
-        if (Array.isArray(data.tugasList)) setTugasList(data.tugasList);
-        if (Array.isArray(data.berkasList)) setBerkasList(data.berkasList);
-        if (typeof data.onedrive === "string") setOnedrive(data.onedrive);
-        if (typeof data.drive === "string") setDrive(data.drive);
-      }
-    }
-    fetchChecklist();
-
-    if (typeof window !== "undefined") {
-      setTheme(document.body.getAttribute("data-theme") === "light" ? "light" : "dark");
-    }
-  }, []);
-
   // Checklist Penulisan Actions
   async function handlePenulisanCheck(idx: number) {
     const updated = [...penulisanList];
     updated[idx].checked = !updated[idx].checked;
     setPenulisanList(updated);
-    await setDoc(checklistDoc, { penulisanList: updated, tugasList, berkasList, onedrive, drive }, { merge: true });
+    if (docRef) await setDoc(docRef, { penulisanList: updated, tugasList, berkasList, onedrive, drive }, { merge: true });
   }
   async function handlePenulisanAdd() {
     if (newPenulisan.trim()) {
       const updated = [...penulisanList, { id: uuidv4(), text: newPenulisan, checked: false }];
       setPenulisanList(updated);
       setNewPenulisan("");
-      await setDoc(checklistDoc, { penulisanList: updated, tugasList, berkasList, onedrive, drive }, { merge: true });
+      if (docRef) await setDoc(docRef, { penulisanList: updated, tugasList, berkasList, onedrive, drive }, { merge: true });
     }
   }
   function startEditPenulisan(item: ChecklistItem) {
@@ -142,13 +152,13 @@ function PenulisanPage() {
       setPenulisanList(updated);
       setEditPenulisanId(null);
       setEditPenulisanText("");
-      await setDoc(checklistDoc, { penulisanList: updated, tugasList, berkasList, onedrive, drive }, { merge: true });
+      if (docRef) await setDoc(docRef, { penulisanList: updated, tugasList, berkasList, onedrive, drive }, { merge: true });
     }
   }
   async function handlePenulisanDelete(id: string) {
     const updated = penulisanList.filter(i => i.id !== id);
     setPenulisanList(updated);
-    await setDoc(checklistDoc, { penulisanList: updated, tugasList, berkasList, onedrive, drive }, { merge: true });
+    if (docRef) await setDoc(docRef, { penulisanList: updated, tugasList, berkasList, onedrive, drive }, { merge: true });
   }
 
   // Checklist Tugas Actions
@@ -156,14 +166,14 @@ function PenulisanPage() {
     const updated = [...tugasList];
     updated[idx].checked = !updated[idx].checked;
     setTugasList(updated);
-    await setDoc(checklistDoc, { penulisanList, tugasList: updated, berkasList, onedrive, drive }, { merge: true });
+    if (docRef) await setDoc(docRef, { penulisanList, tugasList: updated, berkasList, onedrive, drive }, { merge: true });
   }
   async function handleTugasAdd() {
     if (newTugas.trim()) {
       const updated = [...tugasList, { id: uuidv4(), text: newTugas, checked: false }];
       setTugasList(updated);
       setNewTugas("");
-      await setDoc(checklistDoc, { penulisanList, tugasList: updated, berkasList, onedrive, drive }, { merge: true });
+      if (docRef) await setDoc(docRef, { penulisanList, tugasList: updated, berkasList, onedrive, drive }, { merge: true });
     }
   }
   function startEditTugas(item: ChecklistItem) {
@@ -178,13 +188,13 @@ function PenulisanPage() {
       setTugasList(updated);
       setEditTugasId(null);
       setEditTugasText("");
-      await setDoc(checklistDoc, { penulisanList, tugasList: updated, berkasList, onedrive, drive }, { merge: true });
+      if (docRef) await setDoc(docRef, { penulisanList, tugasList: updated, berkasList, onedrive, drive }, { merge: true });
     }
   }
   async function handleTugasDelete(id: string) {
     const updated = tugasList.filter(i => i.id !== id);
     setTugasList(updated);
-    await setDoc(checklistDoc, { penulisanList, tugasList: updated, berkasList, onedrive, drive }, { merge: true });
+    if (docRef) await setDoc(docRef, { penulisanList, tugasList: updated, berkasList, onedrive, drive }, { merge: true });
   }
 
   // Checklist Berkas Actions
@@ -192,14 +202,14 @@ function PenulisanPage() {
     const updated = [...berkasList];
     updated[idx].checked = !updated[idx].checked;
     setBerkasList(updated);
-    await setDoc(checklistDoc, { penulisanList, tugasList, berkasList: updated, onedrive, drive }, { merge: true });
+    if (docRef) await setDoc(docRef, { penulisanList, tugasList, berkasList: updated, onedrive, drive }, { merge: true });
   }
   async function handleBerkasAdd() {
     if (newBerkas.trim()) {
       const updated = [...berkasList, { id: uuidv4(), text: newBerkas, checked: false }];
       setBerkasList(updated);
       setNewBerkas("");
-      await setDoc(checklistDoc, { penulisanList, tugasList, berkasList: updated, onedrive, drive }, { merge: true });
+      if (docRef) await setDoc(docRef, { penulisanList, tugasList, berkasList: updated, onedrive, drive }, { merge: true });
     }
   }
   function startEditBerkas(item: ChecklistItem) {
@@ -214,13 +224,13 @@ function PenulisanPage() {
       setBerkasList(updated);
       setEditBerkasId(null);
       setEditBerkasText("");
-      await setDoc(checklistDoc, { penulisanList, tugasList, berkasList: updated, onedrive, drive }, { merge: true });
+      if (docRef) await setDoc(docRef, { penulisanList, tugasList, berkasList: updated, onedrive, drive }, { merge: true });
     }
   }
   async function handleBerkasDelete(id: string) {
     const updated = berkasList.filter(i => i.id !== id);
     setBerkasList(updated);
-    await setDoc(checklistDoc, { penulisanList, tugasList, berkasList: updated, onedrive, drive }, { merge: true });
+    if (docRef) await setDoc(docRef, { penulisanList, tugasList, berkasList: updated, onedrive, drive }, { merge: true });
   }
 
   // Upload Berkas (Firebase Storage)
@@ -235,7 +245,7 @@ function PenulisanPage() {
         item.id === id ? { ...item, fileUrl: url, fileName: file.name } : item
       );
       setBerkasList(updated);
-      await setDoc(checklistDoc, { penulisanList, tugasList, berkasList: updated, onedrive, drive }, { merge: true });
+      if (docRef) await setDoc(docRef, { penulisanList, tugasList, berkasList: updated, onedrive, drive }, { merge: true });
     } catch (err: any) {
       setUploadError("Gagal upload berkas.");
     }
@@ -246,17 +256,17 @@ function PenulisanPage() {
       item.id === id ? { ...item, fileUrl: undefined, fileName: undefined } : item
     );
     setBerkasList(updated);
-    await setDoc(checklistDoc, { penulisanList, tugasList, berkasList: updated, onedrive, drive }, { merge: true });
+    if (docRef) await setDoc(docRef, { penulisanList, tugasList, berkasList: updated, onedrive, drive }, { merge: true });
   }
 
   // OneDrive & Drive
   async function handleOnedriveChange(val: string) {
     setOnedrive(val);
-    await setDoc(checklistDoc, { penulisanList, tugasList, berkasList, onedrive: val, drive }, { merge: true });
+    if (docRef) await setDoc(docRef, { penulisanList, tugasList, berkasList, onedrive: val, drive }, { merge: true });
   }
   async function handleDriveChange(val: string) {
     setDrive(val);
-    await setDoc(checklistDoc, { penulisanList, tugasList, berkasList, onedrive, drive: val }, { merge: true });
+    if (docRef) await setDoc(docRef, { penulisanList, tugasList, berkasList, onedrive, drive: val }, { merge: true });
   }
   function handleCopyOneDrive() {
     if (onedrive) {
@@ -436,12 +446,10 @@ function PenulisanPage() {
     );
   }
 
-  // Responsive style for mobile
+  // Responsive style for mobile & tablet
   const responsiveStyle = `
-    @media (max-width: 600px) {
-      body {
-        padding: 0 !important;
-      }
+    @media (max-width: 900px) {
+      body { padding: 0 !important; }
       main {
         padding: 0.7rem !important;
         max-width: 100vw !important;
@@ -457,12 +465,8 @@ function PenulisanPage() {
         font-size: 1em !important;
         padding: 0.2em 0.5em !important;
       }
-      h1 {
-        font-size: 1.3em !important;
-      }
-      h2 {
-        font-size: 1.1em !important;
-      }
+      h1 { font-size: 1.3em !important; }
+      h2 { font-size: 1.1em !important; }
       [data-section-style], [data-card-style] {
         padding: 1em 0.5em !important;
         max-width: 100vw !important;
@@ -483,6 +487,16 @@ function PenulisanPage() {
       .checklist-section, .progress-section, .jadwal-section {
         padding: 1em 0.5em !important;
         max-width: 100vw !important;
+      }
+      input, select, button {
+        font-size: 1em !important;
+        min-width: 0 !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+      }
+      .MuiInputBase-root, .MuiFormControl-root {
+        width: 100% !important;
+        min-width: 0 !important;
       }
     }
   `;
