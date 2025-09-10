@@ -204,6 +204,7 @@ export default function ReferensiPage() {
   const [editIdx, setEditIdx] = useState<number | null>(null);
   const [previewFileUrl, setPreviewFileUrl] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
+  const [citationFormat, setCitationFormat] = useState<'APA' | 'IEEE' | 'Harvard'>('APA');
   const { user, loading } = useAuth();
   const router = useRouter();
   const db = getFirestore(app);
@@ -367,6 +368,39 @@ export default function ReferensiPage() {
 
   function formatDaftarPustaka(ref: Referensi) {
     const d = ref.data;
+    if (citationFormat === 'IEEE') {
+      switch (ref.jenis) {
+        case "Buku":
+          return `${d.penulis}, ${d.judul}${d.edisi ? `, ${d.edisi}` : ""}. ${d.kota}: ${d.penerbit}, ${d.tahun}.`;
+        case "Jurnal":
+          return `${d.penulis}, \"${d.judul}\", ${d.jurnal}${d.volume ? `, vol. ${d.volume}` : ""}${d.halaman ? `, hlm. ${d.halaman}` : ""}, ${d.tahun}${d.doi ? `, DOI: ${d.doi}` : ""}.`;
+        case "Website":
+          return `${d.penulis}, \"${d.judul}\", ${d.situs}, ${d.tahun}. [Online]. Tersedia: ${d.url}${d.akses ? ` (Diakses: ${d.akses})` : ""}`;
+        case "Laporan":
+          return `${d.penulis}, ${d.judul}${d.nomor ? `, No. ${d.nomor}` : ""}. ${d.penerbit}, ${d.tahun}${d.url ? `, ${d.url}` : ""}.`;
+        case "Skripsi":
+          return `${d.penulis}, ${d.judul}, ${d.jenisKarya}, ${d.universitas}, ${d.tahun}${d.url ? `, ${d.url}` : ""}.`;
+        default:
+          return "";
+      }
+    }
+    if (citationFormat === 'Harvard') {
+      switch (ref.jenis) {
+        case "Buku":
+          return `${d.penulis} ${d.tahun}, ${d.judul}${d.edisi ? `, ${d.edisi}` : ""}, ${d.penerbit}, ${d.kota}.`;
+        case "Jurnal":
+          return `${d.penulis} ${d.tahun}, '${d.judul}', ${d.jurnal}${d.volume ? `, vol. ${d.volume}` : ""}${d.halaman ? `, pp. ${d.halaman}` : ""}${d.doi ? `, doi: ${d.doi}` : ""}.`;
+        case "Website":
+          return `${d.penulis} ${d.tahun}, ${d.judul}, ${d.situs}, tersedia di: ${d.url}${d.akses ? ` (diakses: ${d.akses})` : ""}`;
+        case "Laporan":
+          return `${d.penulis} ${d.tahun}, ${d.judul}${d.nomor ? `, No. ${d.nomor}` : ""}, ${d.penerbit}${d.url ? `, tersedia di: ${d.url}` : ""}.`;
+        case "Skripsi":
+          return `${d.penulis} ${d.tahun}, ${d.judul}, ${d.jenisKarya}, ${d.universitas}${d.url ? `, tersedia di: ${d.url}` : ""}.`;
+        default:
+          return "";
+      }
+    }
+    // Default APA
     switch (ref.jenis) {
       case "Buku":
         return `${d.penulis} (${d.tahun}). ${d.judul}${d.edisi ? ` (${d.edisi})` : ""}. ${d.kota}: ${d.penerbit}.`;
@@ -383,59 +417,47 @@ export default function ReferensiPage() {
     }
   }
 
+  // Tambahkan fungsi formatSitasi
+  function formatSitasi(ref: Referensi) {
+    const d = ref.data;
+    // Contoh sederhana: Nama belakang, tahun
+    // Bisa disesuaikan dengan format sitasi yang diinginkan
+    if (!d.penulis || !d.tahun) return "";
+    // Ambil nama belakang saja
+    const namaBelakang = d.penulis.split(",")[0] || d.penulis;
+    return `(${namaBelakang}, ${d.tahun})`;
+  }
+
   if (loading || !user) return <div>Loading...</div>;
 
   // Responsive style for mobile & tablet
   const responsiveStyle = `
     @media (max-width: 900px) {
-      body { padding: 0 !important; }
-      main {
-        padding: 0.7rem !important;
-        max-width: 100vw !important;
-        margin-top: 0.5rem !important;
-        border-radius: 0 !important;
-        min-height: 90vh !important;
-      }
-      header {
-        padding: 0.7rem 1rem !important;
-        font-size: 1em !important;
-      }
-      .nav-link, .theme-toggle-btn {
-        font-size: 1em !important;
-        padding: 0.2em 0.5em !important;
-      }
-      h1 { font-size: 1.3em !important; }
-      h2 { font-size: 1.1em !important; }
-      [data-section-style], [data-card-style] {
-        padding: 1em 0.5em !important;
-        max-width: 100vw !important;
-        border-radius: 10px !important;
-      }
-      .main-menu-cards {
+      .referensi-toolbar {
         flex-direction: column !important;
-        gap: 1em !important;
-        min-width: 0 !important;
-        max-width: 100vw !important;
+        align-items: stretch !important;
+        gap: 0.7em !important;
+        padding: 0.5em 0.1em !important;
       }
-      .main-menu-cards a {
-        min-width: 0 !important;
-        max-width: 100vw !important;
-        font-size: 1em !important;
-        padding: 1em 0.5em !important;
-      }
-      .checklist-section, .progress-section, .jadwal-section {
-        padding: 1em 0.5em !important;
-        max-width: 100vw !important;
-      }
-      input, select, button {
-        font-size: 1em !important;
-        min-width: 0 !important;
-        width: 100% !important;
-        box-sizing: border-box !important;
-      }
-      .MuiInputBase-root, .MuiFormControl-root {
+      .referensi-toolbar input,
+      .referensi-toolbar select,
+      .referensi-toolbar button {
         width: 100% !important;
         min-width: 0 !important;
+        font-size: 0.98em !important;
+        margin-bottom: 0.2em !important;
+      }
+    }
+    @media (max-width: 600px) {
+      .referensi-toolbar {
+        padding: 0.3em 0.05em !important;
+        gap: 0.5em !important;
+      }
+      .referensi-toolbar input,
+      .referensi-toolbar select,
+      .referensi-toolbar button {
+        font-size: 0.95em !important;
+        padding: 0.6em 0.7em !important;
       }
     }
   `;
@@ -455,7 +477,14 @@ export default function ReferensiPage() {
         WebkitTextFillColor: "transparent"
       }}>Referensi</h1>
       <div style={{
-        display: "flex", gap: "1em", marginBottom: "1.2em", alignItems: "center"
+        display: "flex",
+        flexWrap: "wrap",
+        gap: "1em",
+        marginBottom: "1.2em",
+        alignItems: "center",
+        justifyContent: "flex-start",
+        rowGap: "0.7em",
+        padding: "0.5em 0.2em"
       }}>
         <input
           type="text"
@@ -468,8 +497,11 @@ export default function ReferensiPage() {
             border: "1.5px solid #6366f1",
             fontSize: "1em",
             width: 220,
+            minWidth: 120,
             background: theme === "dark" ? "#23272f" : "#fff",
-            color: theme === "dark" ? "#f3f4f6" : "#222"
+            color: theme === "dark" ? "#f3f4f6" : "#222",
+            flex: "1 1 180px",
+            maxWidth: "100%"
           }}
         />
         <select
@@ -481,7 +513,10 @@ export default function ReferensiPage() {
             border: "1.5px solid #6366f1",
             fontSize: "1em",
             background: theme === "dark" ? "#23272f" : "#fff",
-            color: theme === "dark" ? "#f3f4f6" : "#222"
+            color: theme === "dark" ? "#f3f4f6" : "#222",
+            flex: "1 1 120px",
+            minWidth: 90,
+            maxWidth: "100%"
           }}
         >
           <option value="tahun">Sort: Tahun</option>
@@ -497,7 +532,10 @@ export default function ReferensiPage() {
             borderRadius: "8px",
             padding: "0.7em 1.2em",
             fontWeight: 500,
-            cursor: "pointer"
+            cursor: "pointer",
+            flex: "1 1 100px",
+            minWidth: 90,
+            maxWidth: "100%"
           }}
         >
           {sortOrder === "asc" ? "Naik" : "Turun"}
@@ -515,7 +553,10 @@ export default function ReferensiPage() {
             boxShadow: theme === "dark"
               ? "0 4px 16px rgba(99,102,241,0.18)"
               : "0 4px 16px rgba(99,102,241,0.10)",
-            fontSize: "1.08em"
+            fontSize: "1.08em",
+            flex: "1 1 140px",
+            minWidth: 120,
+            maxWidth: "100%"
           }}
         >
           + Referensi Baru
@@ -529,7 +570,10 @@ export default function ReferensiPage() {
             borderRadius: "8px",
             padding: "0.7em 1.2em",
             fontWeight: 500,
-            cursor: "pointer"
+            cursor: "pointer",
+            flex: "1 1 120px",
+            minWidth: 100,
+            maxWidth: "100%"
           }}
         >
           Export PDF
@@ -690,97 +734,150 @@ export default function ReferensiPage() {
         marginBottom: "1em",
         color: theme === "dark" ? "#f3f4f6" : "#222"
       }}>Daftar Pustaka</h2>
-      <ol style={{
+      <div style={{ marginBottom: "1em", display: "flex", alignItems: "center", gap: 12 }}>
+        <label style={{ color: colorLabel, fontWeight: 600 }}>Format:</label>
+        <select value={citationFormat} onChange={e => setCitationFormat(e.target.value as any)} style={{
+          padding: "0.5em 1em",
+          borderRadius: 8,
+          border: `1.5px solid ${colorAccent}`,
+          background: colorInputBg,
+          color: colorText,
+          fontWeight: 500
+        }}>
+          <option value="APA">APA</option>
+          <option value="IEEE">IEEE</option>
+          <option value="Harvard">Harvard</option>
+        </select>
+      </div>
+      <div style={{
         display: "grid",
-        gap: "1.3em",
+        gap: "0.7em",
         padding: 0,
         margin: 0
       }}>
         {filtered.map((ref, i) => (
-          <li key={ref.id || i} style={{
-            marginBottom: "1em",
-            background: theme === "dark" ? "#23272f" : "#fff",
-            borderRadius: "18px",
-            padding: "1.3em 1.7em",
+          <div key={ref.id || i} style={{
+            marginBottom: "0.7em",
+            background: theme === "dark" ? "rgba(36,41,54,0.82)" : "rgba(255,255,255,0.96)",
+            borderRadius: "14px",
+            padding: "0.9em 1.1em 0.7em 1.1em",
             boxShadow: theme === "dark"
-              ? "0 4px 16px rgba(99,102,241,0.18)"
-              : "0 4px 16px rgba(99,102,241,0.10)",
-            fontSize: "1.08em",
+              ? "0 4px 16px rgba(124,58,237,0.13)"
+              : "0 4px 16px rgba(124,58,237,0.07)",
+            fontSize: "0.97em",
             fontWeight: 500,
             color: theme === "dark" ? "#f3f4f6" : "#222",
-            border: "1px solid " + (theme === "dark" ? "#353a47" : "#e0e7ff"),
+            border: theme === "dark" ? "1px solid rgba(124,58,237,0.13)" : "1px solid #a5b4fc",
+            backdropFilter: "blur(6px)",
+            WebkitBackdropFilter: "blur(6px)",
             transition: "box-shadow 0.2s, background 0.2s, transform 0.2s"
           }}>
-            <div style={{ marginBottom: "6px", display: "flex", alignItems: "center", gap: "1em" }}>
+            {/* Baris 1: Jenis sumber dan tahun */}
+            <div style={{ display: "flex", alignItems: "center", gap: "0.7em", marginBottom: "2px" }}>
               <span style={{
-                background: "#6366f1",
+                background: theme === "dark" ? "#6366f1" : "#a5b4fc",
                 color: "#fff",
-                borderRadius: "8px",
-                padding: "2px 12px",
-                fontSize: "0.9em",
-                fontWeight: 600
+                borderRadius: "7px",
+                padding: "2px 10px",
+                fontSize: "0.85em",
+                fontWeight: 600,
+                minWidth: 56,
+                textAlign: "center"
               }}>{ref.jenis}</span>
               <span style={{
-                color: "#60a5fa",
-                fontSize: "0.9em"
+                color: theme === "dark" ? "#a5b4fc" : "#6366f1",
+                fontSize: "0.85em",
+                fontWeight: 500,
+                minWidth: 38,
+                textAlign: "left"
               }}>{ref.data.tahun}</span>
             </div>
-            <div style={{ marginBottom: "8px" }}>
-              {formatDaftarPustaka(ref)}
+            {/* Baris 2: Daftar pustaka dan salin di akhir teks */}
+            <div style={{ marginBottom: "8px", wordBreak: "break-word", lineHeight: 1.6 }}>
+              <span>{formatDaftarPustaka(ref)} </span>
+              <span
+                onClick={() => navigator.clipboard.writeText(formatDaftarPustaka(ref))}
+                style={{
+                  color: theme === "dark" ? "#a5b4fc" : "#6366f1",
+                  fontSize: "0.82em",
+                  marginLeft: "8px",
+                  cursor: "pointer",
+                  textDecoration: "underline",
+                  fontWeight: 500
+                }}
+              >salin</span>
+            </div>
+            {/* Baris 3: Sitasi dan salin di akhir teks */}
+            <div style={{ marginBottom: "8px", wordBreak: "break-word", lineHeight: 1.6 }}>
+              <span>{formatSitasi(ref)} </span>
+              <span
+                onClick={() => navigator.clipboard.writeText(formatSitasi(ref))}
+                style={{
+                  color: theme === "dark" ? "#a5b4fc" : "#6366f1",
+                  fontSize: "0.82em",
+                  marginLeft: "8px",
+                  cursor: "pointer",
+                  textDecoration: "underline",
+                  fontWeight: 500
+                }}
+              >salin</span>
+            </div>
+            {/* Baris 4: Download dan Preview file */}
+            <div style={{ marginBottom: "8px", display: "flex", gap: "0.7em", alignItems: "center" }}>
               {ref.fileUrl && (
-                <span>
-                  {" "}
-                  | <a href={ref.fileUrl} download={ref.fileName}
-                    style={{ color: "#6366f1", textDecoration: "underline", fontWeight: 600 }}>
+                <>
+                  <a href={ref.fileUrl} download={ref.fileName}
+                    style={{ color: theme === "dark" ? "#a5b4fc" : "#6366f1", textDecoration: "underline", fontWeight: 600 }}>
                     Download file
                   </a>
                   <button
                     style={{
-                      marginLeft: "8px",
-                      background: "#e0e7ff",
-                      color: "#6366f1",
+                      background: theme === "dark" ? "rgba(124,58,237,0.18)" : "#e0e7ff",
+                      color: theme === "dark" ? "#a5b4fc" : "#6366f1",
                       border: "none",
-                      borderRadius: "8px",
-                      padding: "0.3em 0.8em",
+                      borderRadius: "7px",
+                      padding: "0.25em 0.7em",
                       fontWeight: 500,
-                      cursor: "pointer"
+                      cursor: "pointer",
+                      fontSize: "0.93em"
                     }}
                     onClick={() => handlePreviewFile(ref.fileUrl!)}
-                  >
-                    Preview PDF
-                  </button>
-                </span>
+                  >Preview PDF</button>
+                </>
               )}
             </div>
-            <div style={{ display: "flex", gap: "1em" }}>
+            {/* Baris 5: Edit dan Hapus */}
+            <div style={{ display: "flex", gap: "0.7em", flexWrap: "wrap", marginTop: "2px" }}>
               <button
                 onClick={() => handleEdit(i)}
                 style={{
-                  background: "#6366f1",
-                  color: "#fff",
+                  background: theme === "dark" ? "rgba(124,58,237,0.18)" : "#6366f1",
+                  color: theme === "dark" ? "#a5b4fc" : "#fff",
                   border: "none",
-                  borderRadius: "8px",
-                  padding: "0.5em 1em",
+                  borderRadius: "7px",
+                  padding: "0.25em 0.7em",
                   fontWeight: 500,
-                  cursor: "pointer"
+                  cursor: "pointer",
+                  fontSize: "0.93em"
                 }}
               >Edit</button>
               <button
                 onClick={() => handleDelete(i)}
                 style={{
-                  background: "#ef4444",
-                  color: "#fff",
-                  border: "none",
-                  borderRadius: "8px",
-                  padding: "0.5em 1em",
+                  background: theme === "dark" ? "rgba(239,68,68,0.13)" : "#ef4444",
+                  color: theme === "dark" ? "#ef4444" : "#fff",
+                  border: theme === "dark" ? "1px solid rgba(239,68,68,0.28)" : "none",
+                  borderRadius: "7px",
+                  padding: "0.25em 0.7em",
                   fontWeight: 500,
-                  cursor: "pointer"
+                  cursor: "pointer",
+                  fontSize: "0.93em"
                 }}
               >Hapus</button>
             </div>
-          </li>
+          </div>
         ))}
-      </ol>
+      </div>
     </div>
   );
 }
