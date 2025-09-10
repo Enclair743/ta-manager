@@ -226,35 +226,15 @@ export default function CatatanTiptapPage() {
         padding: 0.7rem 1rem !important;
         font-size: 1em !important;
       }
-      .nav-link, .theme-toggle-btn {
-        font-size: 1em !important;
-        padding: 0.2em 0.5em !important;
-      }
-      h1 { font-size: 1.3em !important; }
-      h2 { font-size: 1.1em !important; }
+      h1 { font-size: 1.15em !important; }
+      h2 { font-size: 1em !important; }
       [data-section-style], [data-card-style] {
-        padding: 1em 0.5em !important;
+        padding: 0.7em 0.3em !important;
         max-width: 100vw !important;
         border-radius: 10px !important;
       }
-      .main-menu-cards {
-        flex-direction: column !important;
-        gap: 1em !important;
-        min-width: 0 !important;
-        max-width: 100vw !important;
-      }
-      .main-menu-cards a {
-        min-width: 0 !important;
-        max-width: 100vw !important;
-        font-size: 1em !important;
-        padding: 1em 0.5em !important;
-      }
-      .checklist-section, .progress-section, .jadwal-section {
-        padding: 1em 0.5em !important;
-        max-width: 100vw !important;
-      }
       input, select, button {
-        font-size: 1em !important;
+        font-size: 0.98em !important;
         min-width: 0 !important;
         width: 100% !important;
         box-sizing: border-box !important;
@@ -263,13 +243,58 @@ export default function CatatanTiptapPage() {
         width: 100% !important;
         min-width: 0 !important;
       }
+      .checklist-section ol li, .progress-section, .jadwal-section ul li {
+        font-size: 0.98em !important;
+        padding: 0.7em 0.7em !important;
+      }
+      .main-menu-cards {
+        flex-direction: column !important;
+        gap: 0.7em !important;
+        min-width: 0 !important;
+        max-width: 100vw !important;
+      }
+      .main-menu-cards a {
+        min-width: 0 !important;
+        max-width: 100vw !important;
+        font-size: 0.98em !important;
+        padding: 1em 0.3em !important;
+        margin: 0.2em 0 !important;
+      }
+      .pdf-export-controls, .filter-sort-section {
+        flex-direction: column !important;
+        gap: 0.7em !important;
+        padding: 0.7em 0.3em !important;
+        border-radius: 10px !important;
+      }
+      .pdf-export-controls button, .filter-sort-section button {
+        width: 100% !important;
+        margin-bottom: 0.5em !important;
+      }
+    }
+    @media (max-width: 600px) {
+      h1 { font-size: 1em !important; }
+      h2 { font-size: 0.95em !important; }
+      [data-section-style], [data-card-style] {
+        padding: 0.5em 0.1em !important;
+      }
+      .checklist-section, .progress-section, .jadwal-section {
+        padding: 0.5em 0.1em !important;
+      }
+      .checklist-section ol li, .jadwal-section ul li {
+        font-size: 0.95em !important;
+        padding: 0.5em 0.5em !important;
+      }
+      .pdf-export-controls, .filter-sort-section {
+        padding: 0.5em 0.1em !important;
+        border-radius: 8px !important;
+      }
     }
   `;
 
   if (loading || !user) return <div>Loading...</div>;
 
   return (
-    <div style={{ minHeight: "100vh", background: colorMainBg as string, fontFamily: "Inter, Segoe UI, sans-serif", paddingBottom: "4rem", transition: "background 0.5s" }}>
+    <div style={{ minHeight: "100vh", background: colorMainBg as string, fontFamily: "Inter, Segoe UI, sans-serif", paddingBottom: "6rem", transition: "background 0.5s" }}>
       <style>{responsiveStyle}</style>
       <div style={{
         maxWidth: 820,
@@ -411,18 +436,20 @@ export default function CatatanTiptapPage() {
           margin: "12px 0 24px 0",
           padding: "1em 1.2em",
           background: theme === "dark"
-            ? "rgba(124,58,237,0.08)"
+            ? "rgba(36,41,54,0.92)"
             : "rgba(124,58,237,0.07)",
-          borderRadius: 14,
-          border: colorGlassBorder,
+          borderRadius: 12,
+          border: theme === "dark" ? "1.5px solid rgba(124,58,237,0.18)" : colorGlassBorder,
           boxShadow: colorShadow,
           display: "flex",
-          gap: 14,
-          alignItems: "center",
+          flexDirection: "column",
+          gap: 10,
+          alignItems: "stretch",
           color: colorAccent,
-          fontWeight: 500
+          fontWeight: 500,
+          minWidth: 0,
         }}>
-          <span style={{ fontWeight: 600, color: colorLabel }}>Pilih catatan untuk export PDF:</span>
+          <span style={{ fontWeight: 600, color: colorLabel, marginBottom: 8 }}>Pilih catatan untuk export PDF:</span>
           <button
             onClick={() => exportPDF(selectedPdfIdxs)}
             disabled={selectedPdfIdxs.length === 0}
@@ -430,13 +457,16 @@ export default function CatatanTiptapPage() {
               background: selectedPdfIdxs.length === 0 ? colorAccentLight : colorAccent,
               color: "#fff",
               border: "none",
-              borderRadius: 10,
-              padding: "0.73em 1.2em",
+              borderRadius: 8,
+              padding: "0.7em 0",
               fontWeight: 700,
               cursor: selectedPdfIdxs.length === 0 ? "not-allowed" : "pointer",
               fontSize: "1em",
               boxShadow: colorShadow,
-              transition: "background 0.2s"
+              transition: "background 0.2s",
+              width: "100%",
+              marginBottom: 7,
+              opacity: theme === "dark" ? 0.92 : 1,
             }}
           >
             <span role="img" aria-label="PDF" style={{marginRight: 7}}>📄</span>
@@ -445,16 +475,18 @@ export default function CatatanTiptapPage() {
           <button
             onClick={() => setSelectedPdfIdxs(filteredCatatan.map((_, i) => i))}
             style={{
-              background: "#fff",
-              color: colorAccent,
-              border: colorGlassBorder,
-              borderRadius: 10,
-              padding: "0.73em 1em",
+              background: theme === "dark" ? "rgba(124,58,237,0.18)" : "#fff",
+              color: theme === "dark" ? colorAccent : colorAccent,
+              border: theme === "dark" ? "1.5px solid rgba(124,58,237,0.28)" : colorGlassBorder,
+              borderRadius: 8,
+              padding: "0.7em 0",
               fontWeight: 700,
               cursor: "pointer",
               fontSize: "1em",
               boxShadow: colorShadow,
-              transition: "background 0.2s"
+              transition: "background 0.2s",
+              width: "100%",
+              marginBottom: 7,
             }}
           >
             Pilih Semua
@@ -462,16 +494,17 @@ export default function CatatanTiptapPage() {
           <button
             onClick={() => setSelectedPdfIdxs([])}
             style={{
-              background: "#fff",
+              background: theme === "dark" ? "rgba(239,68,68,0.13)" : "#fff",
               color: colorDanger,
-              border: `1.5px solid ${colorDanger}`,
-              borderRadius: 10,
-              padding: "0.73em 1em",
+              border: theme === "dark" ? "1.5px solid rgba(239,68,68,0.38)" : `1.5px solid ${colorDanger}`,
+              borderRadius: 8,
+              padding: "0.7em 0",
               fontWeight: 700,
               cursor: "pointer",
               fontSize: "1em",
               boxShadow: colorShadow,
-              transition: "background 0.2s"
+              transition: "background 0.2s",
+              width: "100%",
             }}
           >
             Reset Pilihan
