@@ -4,13 +4,18 @@ import { useEffect, useState } from "react";
 import { AuthCalendarProvider } from "../src/context/AuthCalendarContext";
 import { AuthProvider } from "../src/context/AuthContext";
 
+const navItems = [
+  { href: "/dashboard", label: "Dashboard", icon: "🏠" },
+  { href: "/penulisan", label: "Penulisan", icon: "📝" },
+  { href: "/catatan", label: "Catatan", icon: "📒" },
+  { href: "/referensi", label: "Referensi", icon: "🔗" },
+  { href: "/kalender", label: "Kalender", icon: "📅" },
+];
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   const [theme, setTheme] = useState<"dark" | "light">("dark");
   const [menuOpen, setMenuOpen] = useState(false);
-
-  function handleNavClick() {
-    setMenuOpen(false);
-  }
+  const pathname = typeof window !== "undefined" ? window.location.pathname : "";
 
   useEffect(() => {
     const saved = typeof window !== "undefined" ? localStorage.getItem("theme") : null;
@@ -24,11 +29,18 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     }
   }, [theme]);
 
-  // Untuk close menu saat klik di luar menu (backdrop)
+  // Close menu saat klik backdrop
   useEffect(() => {
     function handleOutsideClick(e: MouseEvent) {
       const navList = document.querySelector(".nav-list-mobile");
-      if (menuOpen && navList && !navList.contains(e.target as Node)) {
+      const hamburger = document.querySelector(".hamburger");
+      if (
+        menuOpen &&
+        navList &&
+        !navList.contains(e.target as Node) &&
+        hamburger &&
+        !hamburger.contains(e.target as Node)
+      ) {
         setMenuOpen(false);
       }
     }
@@ -39,6 +51,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       document.removeEventListener("mousedown", handleOutsideClick);
     };
   }, [menuOpen]);
+
+  function handleNavClick() {
+    setMenuOpen(false);
+  }
 
   const bodyStyle = {
     minHeight: "100vh",
@@ -73,23 +89,35 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <style>{`
           .nav-link {
             color: inherit;
-            padding: 0.3em 0.8em;
-            border-radius: 6px;
-            transition: background 0.2s, color 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 0.7em;
+            padding: 0.7em 1.2em;
+            border-radius: 10px;
+            font-size: 1.05em;
             text-decoration: none;
+            transition: background 0.2s, color 0.2s, box-shadow 0.2s;
+            font-weight: 500;
+            position: relative;
           }
-          .nav-link:hover {
+          .nav-link:hover, .nav-link.active {
             background: ${theme === "dark" ? "#23272f" : "#e0e7ff"};
+            color: ${theme === "dark" ? "#a5b4fc" : "#6366f1"};
+            box-shadow: 0 2px 8px rgba(99,102,241,0.12);
+          }
+          .nav-link .nav-icon {
+            font-size: 1.19em;
+            vertical-align: middle;
           }
           .theme-toggle-btn {
             margin-left: auto;
             background: none;
             border: none;
             color: inherit;
-            font-size: 1.2em;
+            font-size: 1.35em;
             cursor: pointer;
-            padding: 0.3em 0.8em;
-            border-radius: 6px;
+            padding: 0.35em 1em;
+            border-radius: 10px;
             transition: background 0.2s;
           }
           .theme-toggle-btn:hover {
@@ -98,15 +126,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           }
           .nav-list-desktop {
             display: flex;
-            gap: 2em;
+            gap: 1.35em;
             list-style: none;
             margin: 0;
             padding: 0;
             align-items: center;
-            font-weight: 600;
-            font-size: 1.15em;
-            color: inherit;
-            transition: all 0.2s;
             z-index: 1001;
           }
           .hamburger {
@@ -116,18 +140,21 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             font-size: 2em;
             color: inherit;
             cursor: pointer;
-            z-index: 1002;
+            z-index: 2002;
+            margin-left: 1.5em;
+            transition: color 0.2s;
+            border-radius: 10px;
+            padding: 0.25em 0.45em;
           }
-          /* Mobile Styles */
+          .hamburger:active {
+            color: ${theme === "dark" ? "#a5b4fc" : "#6366f1"};
+          }
           @media (max-width: 900px) {
             .nav-list-desktop {
               display: none !important;
             }
             .hamburger {
               display: block !important;
-              position: relative;
-              z-index: 1002;
-              margin-left: 1.5em;
             }
           }
         `}</style>
@@ -143,25 +170,29 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               zIndex: 1000,
               display: "flex",
               alignItems: "center",
-              justifyContent: "space-between"
+              justifyContent: "flex-end" // Tidak ada judul, jadi kanan saja
             }}>
-              <div style={{ fontWeight: 700, fontSize: "1.2em", color: theme === "dark" ? "#fff" : "#000" }}>
-                TA Manager
-              </div>
               <nav style={{ position: "relative", zIndex: 1001, flex: 1 }}>
                 <ul className="nav-list-desktop">
-                  <li><Link href="/dashboard" className="nav-link" onClick={handleNavClick}>Dashboard</Link></li>
-                  <li><Link href="/penulisan" className="nav-link" onClick={handleNavClick}>Penulisan</Link></li>
-                  <li><Link href="/catatan" className="nav-link" onClick={handleNavClick}>Catatan</Link></li>
-                  <li><Link href="/referensi" className="nav-link" onClick={handleNavClick}>Referensi</Link></li>
-                  <li><Link href="/kalender" className="nav-link" onClick={handleNavClick}>Kalender</Link></li>
+                  {navItems.map(item => (
+                    <li key={item.href}>
+                      <Link href={item.href} className={`nav-link${pathname === item.href ? " active" : ""}`}>
+                        <span className="nav-icon">{item.icon}</span>
+                        {item.label}
+                      </Link>
+                    </li>
+                  ))}
                 </ul>
                 <button
                   className="hamburger"
                   aria-label="Buka menu"
                   onClick={() => setMenuOpen((prev) => !prev)}
                 >
-                  &#9776;
+                  <svg width="28" height="28" viewBox="0 0 24 24" style={{verticalAlign: "middle"}}>
+                    <rect y="5" width="24" height="2" rx="1" fill="currentColor"/>
+                    <rect y="11" width="24" height="2" rx="1" fill="currentColor"/>
+                    <rect y="17" width="24" height="2" rx="1" fill="currentColor"/>
+                  </svg>
                 </button>
                 {/* Mobile Menu */}
                 <div
@@ -172,41 +203,60 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                     left: 0,
                     width: "100vw",
                     height: "100vh",
-                    background: "rgba(0,0,0,0.5)",
-                    zIndex: 2000,
+                    background: menuOpen ? "rgba(34,34,40,0.55)" : "transparent",
+                    backdropFilter: menuOpen ? "blur(5px)" : "none",
+                    zIndex: 9999,
+                    transition: "background 0.3s",
                   }}
                 >
                   <ul
                     className="nav-list-mobile"
                     style={{
                       position: "absolute",
-                      top: "64px",
-                      left: "8px",
-                      right: "8px",
-                      background: theme === "dark" ? "#18181b" : "#fff",
-                      borderRadius: "14px",
-                      boxShadow: "0 8px 32px rgba(99,102,241,0.18)",
-                      padding: "1em 0.5em",
+                      top: "74px",
+                      left: "50%",
+                      transform: "translateX(-50%)",
+                      width: "90vw",
+                      maxWidth: "340px",
+                      background: theme === "dark"
+                        ? "rgba(35,39,47,0.98)" : "rgba(255,255,255,0.98)",
+                      borderRadius: "22px",
+                      boxShadow: "0 8px 32px rgba(99,102,241,0.19)",
+                      padding: "1.3em 0.5em 1em 0.5em",
                       display: "flex",
                       flexDirection: "column",
-                      gap: "0.25em",
-                      fontWeight: 600,
-                      fontSize: "1.15em",
+                      gap: "0.3em",
+                      fontWeight: 500,
+                      fontSize: "1.13em",
+                      animation: menuOpen ? "slideDown 0.28s cubic-bezier(.42,1.14,.78,1.09)" : "none",
                     }}
                   >
-                    <li><Link href="/dashboard" className="nav-link" onClick={handleNavClick}>Dashboard</Link></li>
-                    <li><Link href="/penulisan" className="nav-link" onClick={handleNavClick}>Penulisan</Link></li>
-                    <li><Link href="/catatan" className="nav-link" onClick={handleNavClick}>Catatan</Link></li>
-                    <li><Link href="/referensi" className="nav-link" onClick={handleNavClick}>Referensi</Link></li>
-                    <li><Link href="/kalender" className="nav-link" onClick={handleNavClick}>Kalender</Link></li>
+                    {navItems.map(item => (
+                      <li key={item.href}>
+                        <Link
+                          href={item.href}
+                          className={`nav-link${pathname === item.href ? " active" : ""}`}
+                          onClick={handleNavClick}
+                        >
+                          <span className="nav-icon">{item.icon}</span>
+                          {item.label}
+                        </Link>
+                      </li>
+                    ))}
                   </ul>
+                  <style>{`
+                    @keyframes slideDown {
+                      from { opacity:0; transform:translateY(-36px) translateX(-50%);}
+                      to   { opacity:1; transform:translateY(0) translateX(-50%);}
+                    }
+                  `}</style>
                 </div>
               </nav>
               <button
                 className="theme-toggle-btn"
                 aria-label="Toggle theme"
                 onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-                style={{ marginLeft: "auto", zIndex: 1002 }}
+                style={{ marginLeft: "auto", zIndex: 2002 }}
               >
                 {theme === "dark" ? "🌞" : "🌙"}
               </button>
