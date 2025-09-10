@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import app from "../firebase";
-import { getFirestore, collection, addDoc, getDocs, updateDoc, deleteDoc, doc, DocumentData, QueryDocumentSnapshot } from "firebase/firestore";
+import { getFirestore, collection, addDoc, getDocs, updateDoc, deleteDoc, doc, DocumentData, QueryDocumentSnapshot, getDoc } from "firebase/firestore";
 import jsPDF from "jspdf";
 import { useAuth } from "../../src/context/AuthContext";
 import { useRouter } from "next/navigation";
@@ -208,6 +208,11 @@ export default function ReferensiPage() {
   const router = useRouter();
   const db = getFirestore(app);
 
+  // Ganti doc menjadi per user
+  function getReferensiDoc(uid: string) {
+    return doc(db, "referensi", uid);
+  }
+
   // Color palette mirip dashboard/catatan
   const colorAccent = '#7c3aed';
   const colorAccentLight = '#c7d2fe';
@@ -239,16 +244,27 @@ export default function ReferensiPage() {
     }
   }, [user, loading, router]);
 
+  const [docRef, setDocRef] = useState<any>(null);
+
+  useEffect(() => {
+    if (!loading && user) {
+      setDocRef(getReferensiDoc(user.uid));
+    }
+  }, [user, loading]);
+
   useEffect(() => {
     async function fetchReferensi() {
-      const snapshot = await getDocs(collection(db, "referensi"));
-      setReferensiList(snapshot.docs.map((doc: QueryDocumentSnapshot<DocumentData>) => ({
-        id: doc.id,
-        ...doc.data()
-      } as Referensi)));
+      if (!docRef) return;
+      const snap = await getDoc(docRef);
+      if (snap.exists()) {
+        const data = snap.data() as { referensiList?: Referensi[] };
+        setReferensiList(data.referensiList || []);
+      } else {
+        setReferensiList([]);
+      }
     }
     fetchReferensi();
-  }, []);
+  }, [docRef]);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -369,12 +385,10 @@ export default function ReferensiPage() {
 
   if (loading || !user) return <div>Loading...</div>;
 
-  // Responsive style for mobile
+  // Responsive style for mobile & tablet
   const responsiveStyle = `
-    @media (max-width: 600px) {
-      body {
-        padding: 0 !important;
-      }
+    @media (max-width: 900px) {
+      body { padding: 0 !important; }
       main {
         padding: 0.7rem !important;
         max-width: 100vw !important;
@@ -390,12 +404,8 @@ export default function ReferensiPage() {
         font-size: 1em !important;
         padding: 0.2em 0.5em !important;
       }
-      h1 {
-        font-size: 1.3em !important;
-      }
-      h2 {
-        font-size: 1.1em !important;
-      }
+      h1 { font-size: 1.3em !important; }
+      h2 { font-size: 1.1em !important; }
       [data-section-style], [data-card-style] {
         padding: 1em 0.5em !important;
         max-width: 100vw !important;
@@ -416,6 +426,16 @@ export default function ReferensiPage() {
       .checklist-section, .progress-section, .jadwal-section {
         padding: 1em 0.5em !important;
         max-width: 100vw !important;
+      }
+      input, select, button {
+        font-size: 1em !important;
+        min-width: 0 !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+      }
+      .MuiInputBase-root, .MuiFormControl-root {
+        width: 100% !important;
+        min-width: 0 !important;
       }
     }
   `;
