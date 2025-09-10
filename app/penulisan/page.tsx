@@ -283,9 +283,52 @@ function PenulisanPage() {
     }
   }
 
+  // State untuk popup input checklist
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [modalValue, setModalValue] = useState("");
+  const [modalType, setModalType] = useState<"penulisan"|"tugas"|"berkas">("penulisan");
+
+  // Fungsi untuk buka modal
+  function openAddModal(type: "penulisan"|"tugas"|"berkas") {
+    setModalType(type);
+    setShowAddModal(true);
+    setModalValue("");
+  }
+  // Fungsi simpan dari modal
+  function handleModalSave() {
+    if (!modalValue.trim()) return;
+    if (modalType === "penulisan") {
+      handlePenulisanAddModal(modalValue);
+    } else if (modalType === "tugas") {
+      handleTugasAddModal(modalValue);
+    } else {
+      handleBerkasAddModal(modalValue);
+    }
+    setShowAddModal(false);
+    setModalValue("");
+  }
+  // Handler add dari modal
+  function handlePenulisanAddModal(val: string) {
+    const updated = [...penulisanList, { id: uuidv4(), text: val, checked: false }];
+    setPenulisanList(updated);
+    if (docRef) setDoc(docRef, { penulisanList: updated, tugasList, berkasList, onedrive, drive }, { merge: true });
+  }
+  function handleTugasAddModal(val: string) {
+    const updated = [...tugasList, { id: uuidv4(), text: val, checked: false }];
+    setTugasList(updated);
+    if (docRef) setDoc(docRef, { penulisanList, tugasList: updated, berkasList, onedrive, drive }, { merge: true });
+  }
+  function handleBerkasAddModal(val: string) {
+    const updated = [...berkasList, { id: uuidv4(), text: val, checked: false }];
+    setBerkasList(updated);
+    if (docRef) setDoc(docRef, { penulisanList, tugasList, berkasList: updated, onedrive, drive }, { merge: true });
+  }
+
   // Style helpers
   const cardStyle = {
-    background: theme === "dark" ? "#23272f" : "#fff",
+    background: theme === "dark"
+      ? "rgba(36, 41, 54, 0.72)"
+      : "rgba(255,255,255,0.82)",
     borderRadius: "18px",
     boxShadow: theme === "dark"
       ? "0 8px 32px rgba(99,102,241,0.18)"
@@ -293,7 +336,9 @@ function PenulisanPage() {
     padding: "1.7em 2em",
     marginBottom: "2em",
     color: theme === "dark" ? "#f3f4f6" : "#222",
-    border: theme === "dark" ? "1.5px solid #353a47" : "none",
+    border: theme === "dark" ? "1.5px solid #353a47" : "1.5px solid #e0e7ff",
+    backdropFilter: "blur(8px)",
+    WebkitBackdropFilter: "blur(8px)",
   };
 
   const btn = {
@@ -355,34 +400,31 @@ function PenulisanPage() {
         }}>
           {list.map((item, i) => (
             <li key={item.id} style={{
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "flex-start",
-              marginBottom: "1.3em",
               background: item.checked
                 ? (theme === "dark" ? "#23272f" : "#e0e7ff")
                 : (theme === "dark" ? "#23272f" : "#fff"),
               borderRadius: "10px",
-              padding: "1em",
+              padding: "0.7em 0.7em 0.5em 0.7em",
               boxShadow: item.checked
-                ? "0 4px 16px rgba(99,102,241,0.15)"
-                : "0 2px 8px rgba(99,102,241,0.05)",
+                ? "0 4px 16px rgba(99,102,241,0.12)"
+                : "0 2px 8px rgba(99,102,241,0.04)",
               border: item.checked
-                ? "1.5px solid #6366f1"
+                ? "1.2px solid #6366f1"
                 : "1px solid #353a47",
               color: theme === "dark" ? "#f3f4f6" : "#222",
+              marginBottom: "0.9em",
               transition: "box-shadow 0.2s, background 0.2s"
             }}>
-              <div style={{ display: "flex", alignItems: "center", width: "100%" }}>
+              <div style={{ fontWeight: 500, fontSize: "0.98em", wordBreak: "break-word", marginBottom: "0.7em" }}>{item.text}</div>
+              <div style={{ display: "flex", gap: "0.7em", width: "100%" }}>
                 <input
                   type="checkbox"
                   checked={item.checked}
                   onChange={() => onCheck(i)}
                   style={{
-                    marginRight: "1em",
                     accentColor: "#6366f1",
-                    width: "1.2em",
-                    height: "1.2em",
+                    width: "1em",
+                    height: "1em",
                   }}
                 />
                 {editId === item.id ? (
@@ -393,119 +435,50 @@ function PenulisanPage() {
                       onChange={e => setEditText(e.target.value)}
                       style={{
                         flex: 1,
-                        marginRight: "0.5em",
-                        padding: "0.5em",
+                        padding: "0.4em",
                         borderRadius: "6px",
-                        border: "1px solid #6366f1"
+                        border: "1px solid #6366f1",
+                        fontSize: "0.97em"
                       }}
                     />
                     <button onClick={onEditSave}
-                      style={{ ...btn, marginRight: "0.3em" }}>Simpan</button>
+                      style={{ ...btn, padding: "0.4em 0.7em", fontSize: "0.95em" }}>Simpan</button>
                     <button onClick={() => setEditId(null)}
-                      style={btnGray}>Batal</button>
+                      style={{ ...btnGray, padding: "0.4em 0.7em", fontSize: "0.95em" }}>Batal</button>
                   </>
                 ) : (
                   <>
-                    <span style={{ flex: 1, fontWeight: 500, fontSize: "1.08em" }}>{item.text}</span>
                     <button onClick={() => onEdit(item)}
-                      style={{ ...btn, marginRight: "0.3em" }}>Edit</button>
+                      style={{ ...btn, padding: "0.4em 0.7em", fontSize: "0.95em" }}>Edit</button>
                     <button onClick={() => onDelete(item.id)}
-                      style={btnRed}>Hapus</button>
+                      style={{ ...btnRed, padding: "0.4em 0.7em", fontSize: "0.95em" }}>Hapus</button>
                   </>
                 )}
               </div>
             </li>
           ))}
         </ul>
-        <div style={{ display: "flex", gap: "0.6em", marginTop: "0.5em" }}>
-          <input
-            type="text"
-            value={newValue}
-            onChange={e => setNewValue(e.target.value)}
-            placeholder={placeholder}
-            style={{
-              flex: 1,
-              padding: "0.7em",
-              borderRadius: "8px",
-              border: "1.5px solid #6366f1",
-              fontSize: "1em"
-            }}
-          />
+        <div style={{ display: "flex", gap: "0.5em", marginTop: "0.3em" }}>
           <button
-            onClick={onAdd}
+            onClick={() => openAddModal(placeholder.includes("penulisan") ? "penulisan" : placeholder.includes("tugas") ? "tugas" : "berkas")}
             style={{
               ...btn,
-              padding: "0.7em 1.2em",
+              padding: "0.5em 1em",
               fontWeight: 500,
+              fontSize: "0.95em",
+              width: "100%"
             }}
           >
-            +
+            + Tambah
           </button>
         </div>
       </>
     );
   }
 
-  // Responsive style for mobile & tablet
-  const responsiveStyle = `
-    @media (max-width: 900px) {
-      body { padding: 0 !important; }
-      main {
-        padding: 0.7rem !important;
-        max-width: 100vw !important;
-        margin-top: 0.5rem !important;
-        border-radius: 0 !important;
-        min-height: 90vh !important;
-      }
-      header {
-        padding: 0.7rem 1rem !important;
-        font-size: 1em !important;
-      }
-      .nav-link, .theme-toggle-btn {
-        font-size: 1em !important;
-        padding: 0.2em 0.5em !important;
-      }
-      h1 { font-size: 1.3em !important; }
-      h2 { font-size: 1.1em !important; }
-      [data-section-style], [data-card-style] {
-        padding: 1em 0.5em !important;
-        max-width: 100vw !important;
-        border-radius: 10px !important;
-      }
-      .main-menu-cards {
-        flex-direction: column !important;
-        gap: 1em !important;
-        min-width: 0 !important;
-        max-width: 100vw !important;
-      }
-      .main-menu-cards a {
-        min-width: 0 !important;
-        max-width: 100vw !important;
-        font-size: 1em !important;
-        padding: 1em 0.5em !important;
-      }
-      .checklist-section, .progress-section, .jadwal-section {
-        padding: 1em 0.5em !important;
-        max-width: 100vw !important;
-      }
-      input, select, button {
-        font-size: 1em !important;
-        min-width: 0 !important;
-        width: 100% !important;
-        box-sizing: border-box !important;
-      }
-      .MuiInputBase-root, .MuiFormControl-root {
-        width: 100% !important;
-        min-width: 0 !important;
-      }
-    }
-  `;
-
-  if (loading || !user) return <div>Loading...</div>;
-
   return (
-    <div style={{ maxWidth: 700, margin: "0 auto", marginTop: 30, background: colorMainBg }}>
-      <style>{responsiveStyle}</style>
+    <div style={{ maxWidth: 700, margin: "0 auto", marginTop: 30 }}>
+      {/* <style>{responsiveStyle}</style> */}
       <h1 style={{
         fontSize: "2rem",
         marginBottom: "1em",
@@ -527,14 +500,14 @@ function PenulisanPage() {
         <h2 style={{ marginBottom: 16, fontSize: "1.18em" }}>Dokumen Tugas Akhir</h2>
         <div style={{ marginBottom: 12 }}>
           <label style={{ fontWeight: 500, marginRight: 10 }}>Link OneDrive Dokumen TA:</label>
-          <div style={{ display: "flex", alignItems: "center", gap: "0.8em", marginTop: 5 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: "0.6em", marginTop: 5 }}>
             <input
               type="text"
               value={onedrive}
               onChange={e => handleOnedriveChange(e.target.value)}
               placeholder="Paste link OneDrive TA..."
               style={{
-                flex: 1,
+                width: "100%",
                 padding: "0.8em",
                 borderRadius: "10px",
                 border: "1.5px solid #6366f1",
@@ -543,39 +516,43 @@ function PenulisanPage() {
                 color: theme === "dark" ? "#f3f4f6" : "#222"
               }}
             />
-            <button
-              onClick={handleCopyOneDrive}
-              style={btn}>
-              Copy
-            </button>
-            {onedrive && (
-              <a
-                href={onedrive}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{
-                  ...btnGray,
-                  padding: "0.7em 1.2em",
-                  textDecoration: "none"
-                }}>
-                Buka
-              </a>
+            <div style={{ display: "flex", gap: "0.6em" }}>
+              <button
+                onClick={handleCopyOneDrive}
+                style={{ ...btn, flex: 1, padding: "0.7em 0", fontWeight: 500 }}>
+                Copy
+              </button>
+              {onedrive && (
+                <a
+                  href={onedrive}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    ...btnGray,
+                    flex: 1,
+                    padding: "0.7em 0",
+                    textAlign: "center",
+                    textDecoration: "none"
+                  }}>
+                  Buka
+                </a>
+              )}
+            </div>
+            {showCopyOneDrive && (
+              <span style={{ color: "#6366f1", marginLeft: 2, fontWeight: 500 }}>Link berhasil dicopy!</span>
             )}
           </div>
-          {showCopyOneDrive && (
-            <span style={{ color: "#6366f1", marginLeft: 10, fontWeight: 500 }}>Link berhasil dicopy!</span>
-          )}
         </div>
         <div>
           <label style={{ fontWeight: 500, marginRight: 10 }}>Link Google Drive Dokumen TA:</label>
-          <div style={{ display: "flex", alignItems: "center", gap: "0.8em", marginTop: 5 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: "0.6em", marginTop: 5 }}>
             <input
               type="text"
               value={drive}
               onChange={e => handleDriveChange(e.target.value)}
               placeholder="Paste link Google Drive TA..."
               style={{
-                flex: 1,
+                width: "100%",
                 padding: "0.8em",
                 borderRadius: "10px",
                 border: "1.5px solid #6366f1",
@@ -584,28 +561,32 @@ function PenulisanPage() {
                 color: theme === "dark" ? "#f3f4f6" : "#222"
               }}
             />
-            <button
-              onClick={handleCopyDrive}
-              style={btn}>
-              Copy
-            </button>
-            {drive && (
-              <a
-                href={drive}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{
-                  ...btnGray,
-                  padding: "0.7em 1.2em",
-                  textDecoration: "none"
-                }}>
-                Buka
-              </a>
+            <div style={{ display: "flex", gap: "0.6em" }}>
+              <button
+                onClick={handleCopyDrive}
+                style={{ ...btn, flex: 1, padding: "0.7em 0", fontWeight: 500 }}>
+                Copy
+              </button>
+              {drive && (
+                <a
+                  href={drive}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    ...btnGray,
+                    flex: 1,
+                    padding: "0.7em 0",
+                    textAlign: "center",
+                    textDecoration: "none"
+                  }}>
+                  Buka
+                </a>
+              )}
+            </div>
+            {showCopyDrive && (
+              <span style={{ color: "#6366f1", marginLeft: 2, fontWeight: 500 }}>Link berhasil dicopy!</span>
             )}
           </div>
-          {showCopyDrive && (
-            <span style={{ color: "#6366f1", marginLeft: 10, fontWeight: 500 }}>Link berhasil dicopy!</span>
-          )}
         </div>
       </div>
 
@@ -670,85 +651,59 @@ function PenulisanPage() {
         <ul style={{
           listStyle: "none",
           padding: 0,
-          marginBottom: "1em",
+          marginBottom: "0.5em",
         }}>
           {berkasList.map((item, i) => (
             <li key={item.id} style={{
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "flex-start",
-              marginBottom: "1.3em",
               background: item.checked
                 ? (theme === "dark" ? "#23272f" : "#e0e7ff")
                 : (theme === "dark" ? "#23272f" : "#fff"),
-              borderRadius: "10px",
-              padding: "1em",
+              borderRadius: "5px",
+              padding: "0.45em 0.5em 0.3em 0.5em",
               boxShadow: item.checked
-                ? "0 4px 16px rgba(99,102,241,0.15)"
-                : "0 2px 8px rgba(99,102,241,0.05)",
+                ? "0 1px 4px rgba(99,102,241,0.06)"
+                : "0 1px 2px rgba(99,102,241,0.02)",
               border: item.checked
-                ? "1.5px solid #6366f1"
+                ? "1px solid #6366f1"
                 : "1px solid #353a47",
               color: theme === "dark" ? "#f3f4f6" : "#222",
+              marginBottom: "0.5em",
               transition: "box-shadow 0.2s, background 0.2s"
             }}>
-              <div style={{ display: "flex", alignItems: "center", width: "100%" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "0.4em", width: "100%", marginBottom: "0.3em" }}>
                 <input
                   type="checkbox"
                   checked={item.checked}
                   onChange={() => handleBerkasCheck(i)}
                   style={{
-                    marginRight: "1em",
                     accentColor: "#6366f1",
-                    width: "1.2em",
-                    height: "1.2em",
+                    width: "0.95em",
+                    height: "0.95em",
                   }}
                 />
-                {editBerkasId === item.id ? (
-                  <>
-                    <input
-                      type="text"
-                      value={editBerkasText}
-                      onChange={e => setEditBerkasText(e.target.value)}
-                      style={{
-                        flex: 1,
-                        marginRight: "0.5em",
-                        padding: "0.5em",
-                        borderRadius: "6px",
-                        border: "1px solid #6366f1"
-                      }}
-                    />
-                    <button onClick={handleBerkasEditSave}
-                      style={{ ...btn, marginRight: "0.3em" }}>Simpan</button>
-                    <button onClick={() => setEditBerkasId(null)}
-                      style={btnGray}>Batal</button>
-                  </>
-                ) : (
-                  <>
-                    <span style={{ flex: 1, fontWeight: 500, fontSize: "1.08em" }}>{item.text}</span>
-                    <button onClick={() => startEditBerkas(item)}
-                      style={{ ...btn, marginRight: "0.3em" }}>Edit</button>
-                    <button onClick={() => handleBerkasDelete(item.id)}
-                      style={btnRed}>Hapus</button>
-                  </>
-                )}
+                <span style={{ flex: 1, fontWeight: 500, fontSize: "0.93em" }}>{item.text}</span>
+                <button onClick={() => startEditBerkas(item)}
+                  style={{ ...btn, padding: "0.2em 0.6em", fontSize: "0.91em" }}>Edit</button>
+                <button onClick={() => handleBerkasDelete(item.id)}
+                  style={{ ...btnRed, padding: "0.2em 0.6em", fontSize: "0.91em" }}>Hapus</button>
               </div>
               {/* Upload opsional */}
-              <div style={{ marginTop: "0.7em", width: "100%" }}>
+              <div style={{ marginTop: "0.1em", width: "100%", display: "flex", alignItems: "center", gap: "0.4em" }}>
                 {item.fileUrl ? (
-                  <div style={{ display: "flex", alignItems: "center", gap: "1em" }}>
+                  <>
                     <a href={item.fileUrl} target="_blank" rel="noopener noreferrer"
                       style={{
                         color: "#6366f1",
                         fontWeight: 500,
-                        textDecoration: "underline"
+                        textDecoration: "underline",
+                        fontSize: "0.91em"
                       }}>
                       {item.fileName || "Download Berkas"}
                     </a>
                     <button
                       onClick={() => handleBerkasRemoveFile(item.id)}
-                      style={btnRed}>Hapus File</button>
-                  </div>
+                      style={{ ...btnRed, padding: "0.2em 0.6em", fontSize: "0.91em" }}>Hapus File</button>
+                  </>
                 ) : (
                   <form
                     onSubmit={e => {
@@ -758,16 +713,18 @@ function PenulisanPage() {
                         handleBerkasUpload(item.id, input.files[0]);
                       }
                     }}
+                    style={{ display: "flex", alignItems: "center", gap: "0.4em", width: "100%", flexWrap: "wrap", maxWidth: "100%" }}
                   >
                     <input
                       type="file"
                       name="file"
                       style={{
-                        marginRight: "1em",
-                        padding: "0.3em",
-                        borderRadius: "5px",
+                        padding: "0.1em",
+                        borderRadius: "4px",
                         border: "1px solid #6366f1",
-                        fontSize: "0.95em"
+                        fontSize: "0.91em",
+                        width: "calc(100% - 90px)",
+                        maxWidth: "220px"
                       }}
                       disabled={!!uploadingId}
                       accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.zip"
@@ -775,44 +732,78 @@ function PenulisanPage() {
                     <button
                       type="submit"
                       disabled={!!uploadingId}
-                      style={{ ...btn, padding: "0.3em 0.9em" }}>
+                      style={{ ...btn, padding: "0.1em 0.6em", fontSize: "0.91em", maxWidth: "80px", minWidth: "70px", wordBreak: "keep-all" }}>
                       {uploadingId === item.id ? "Mengunggah..." : "Upload"}
                     </button>
                   </form>
                 )}
                 {uploadError && uploadingId === item.id && (
-                  <span style={{ color: "#ef4444", marginLeft: 10, fontWeight: 500 }}>{uploadError}</span>
+                  <span style={{ color: "#ef4444", marginLeft: 6, fontWeight: 500, fontSize: "0.91em" }}>{uploadError}</span>
                 )}
               </div>
             </li>
           ))}
         </ul>
-        <div style={{ display: "flex", gap: "0.6em", marginTop: "0.5em" }}>
-          <input
-            type="text"
-            value={newBerkas}
-            onChange={e => setNewBerkas(e.target.value)}
-            placeholder="Tambah item berkas..."
-            style={{
-              flex: 1,
-              padding: "0.7em",
-              borderRadius: "8px",
-              border: "1.5px solid #6366f1",
-              fontSize: "1em"
-            }}
-          />
+        <div style={{ display: "flex", gap: "0.5em", marginTop: "0.3em" }}>
           <button
-            onClick={handleBerkasAdd}
+            onClick={() => openAddModal("berkas")}
             style={{
               ...btn,
-              padding: "0.7em 1.2em",
+              padding: "0.5em 1em",
               fontWeight: 500,
+              fontSize: "0.95em",
+              width: "100%"
             }}
           >
-            +
+            + Tambah
           </button>
         </div>
       </div>
+
+      {/* Popup/modal komponen */}
+      {showAddModal && (
+        <div style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          width: "100vw",
+          height: "100vh",
+          background: "rgba(0,0,0,0.35)",
+          zIndex: 9999,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center"
+        }}>
+          <div style={{
+            background: theme === "dark" ? "#23272f" : "#fff",
+            borderRadius: "16px",
+            padding: "2em 1.5em",
+            minWidth: 280,
+            boxShadow: "0 8px 32px rgba(99,102,241,0.18)",
+            color: theme === "dark" ? "#f3f4f6" : "#222"
+          }}>
+            <h3 style={{ marginBottom: "1em", fontWeight: 700, fontSize: "1.1em" }}>Tambah Item {modalType.charAt(0).toUpperCase() + modalType.slice(1)}</h3>
+            <input
+              type="text"
+              value={modalValue}
+              onChange={e => setModalValue(e.target.value)}
+              placeholder={`Nama item ${modalType}...`}
+              style={{
+                width: "100%",
+                padding: "0.7em",
+                borderRadius: "8px",
+                border: "1.5px solid #6366f1",
+                fontSize: "1em",
+                marginBottom: "1em"
+              }}
+            />
+            <div style={{ display: "flex", gap: "0.7em" }}>
+              <button onClick={handleModalSave} style={{ ...btn, flex: 1 }}>Simpan</button>
+              <button onClick={() => setShowAddModal(false)} style={{ ...btnGray, flex: 1 }}>Batal</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
