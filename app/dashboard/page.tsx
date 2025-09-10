@@ -362,31 +362,31 @@ export default function DashboardPage() {
         font-size: 1em !important;
         padding: 0.2em 0.5em !important;
       }
-      h1 { font-size: 1.3em !important; }
-      h2 { font-size: 1.1em !important; }
+      h1 { font-size: 1.15em !important; }
+      h2 { font-size: 1em !important; }
       [data-section-style], [data-card-style] {
-        padding: 1em 0.5em !important;
+        padding: 0.7em 0.3em !important;
         max-width: 100vw !important;
         border-radius: 10px !important;
       }
       .main-menu-cards {
         flex-direction: column !important;
-        gap: 1em !important;
+        gap: 0.7em !important;
         min-width: 0 !important;
         max-width: 100vw !important;
       }
       .main-menu-cards a {
         min-width: 0 !important;
         max-width: 100vw !important;
-        font-size: 1em !important;
-        padding: 1em 0.5em !important;
+        font-size: 0.98em !important;
+        padding: 1em 0.3em !important;
       }
       .checklist-section, .progress-section, .jadwal-section {
-        padding: 1em 0.5em !important;
+        padding: 0.7em 0.3em !important;
         max-width: 100vw !important;
       }
       input, select, button {
-        font-size: 1em !important;
+        font-size: 0.98em !important;
         min-width: 0 !important;
         width: 100% !important;
         box-sizing: border-box !important;
@@ -394,6 +394,43 @@ export default function DashboardPage() {
       .MuiInputBase-root, .MuiFormControl-root {
         width: 100% !important;
         min-width: 0 !important;
+      }
+      .checklist-section ol li, .progress-section, .jadwal-section ul li {
+        font-size: 0.98em !important;
+        padding: 0.7em 0.7em !important;
+      }
+      .checklist-section h3, .progress-section h2, .jadwal-section h2 {
+        font-size: 0.98em !important;
+        margin-bottom: 0.5em !important;
+      }
+      .checklist-section ol {
+        margin-left: 0 !important;
+        padding-left: 0 !important;
+      }
+      .checklist-section ol li {
+        flex-direction: column !important;
+        gap: 0.3em !important;
+      }
+      .main-menu-cards a {
+        margin: 0.2em 0 !important;
+      }
+    }
+    @media (max-width: 600px) {
+      h1 { font-size: 1em !important; }
+      h2 { font-size: 0.95em !important; }
+      .main-menu-cards a {
+        font-size: 0.95em !important;
+        padding: 0.7em 0.2em !important;
+      }
+      [data-section-style], [data-card-style] {
+        padding: 0.5em 0.1em !important;
+      }
+      .checklist-section, .progress-section, .jadwal-section {
+        padding: 0.5em 0.1em !important;
+      }
+      .checklist-section ol li, .jadwal-section ul li {
+        font-size: 0.95em !important;
+        padding: 0.5em 0.5em !important;
       }
     }
   `;
@@ -403,23 +440,36 @@ export default function DashboardPage() {
     <div style={{ fontFamily: "Inter, Roboto, Arial, sans-serif", background: colorMainBg }}>
       <style>{responsiveStyle}</style>
       <h1 style={{
-        fontSize: "2.1em",
+        fontSize: "1.45em",
         fontWeight: 800,
-        margin: "0 auto 1.1em auto",
+        margin: "1.2em auto 0.7em auto",
         color: colorAccent,
         background: theme === 'dark'
-          ? ('linear-gradient(90deg,#c7d2fe,#7c3aed)' as string)
-          : ('linear-gradient(90deg,#7c3aed,#a5b4fc)' as string),
+          ? 'linear-gradient(90deg,#a5b4fc,#7c3aed)'
+          : 'linear-gradient(90deg,#7c3aed,#a5b4fc)',
         backgroundClip: "text",
         WebkitBackgroundClip: "text",
         WebkitTextFillColor: "transparent",
-        textAlign: "center"
+        textAlign: "center",
+        letterSpacing: "0.01em"
       }}>
         Dashboard Tugas Akhir
       </h1>
 
       {/* Email User */}
-      <div style={{ textAlign: "center", fontSize: "1.1em", color: "#6366f1", marginBottom: "1.2em", fontWeight: 500 }}>
+      <div style={{
+        textAlign: "center",
+        fontSize: "1.18em",
+        fontWeight: 700,
+        margin: "0.7em auto 1.3em auto",
+        background: theme === 'dark'
+          ? 'linear-gradient(90deg,#6366f1,#a5b4fc)'
+          : 'linear-gradient(90deg,#7c3aed,#a5b4fc)',
+        backgroundClip: "text",
+        WebkitBackgroundClip: "text",
+        WebkitTextFillColor: "transparent",
+        letterSpacing: "0.01em"
+      }}>
         {user.email}
       </div>
 
@@ -523,12 +573,12 @@ export default function DashboardPage() {
       {/* Main Menu Cards */}
       <div style={{
         display: "flex",
-        flexDirection: "row",
-        flexWrap: "wrap",
-        gap: "1.5rem",
-        marginBottom: "2em",
-        maxWidth: 820,
-        margin: "0 auto",
+        flexDirection: "column", // agar menu vertikal di HP
+        gap: "1em",
+        marginBottom: "1.5em",
+        width: "100%", // full lebar
+        maxWidth: "100%", // hilangkan batas maxWidth
+        margin: "0 auto 1.5em auto",
         justifyContent: "center",
         alignItems: "stretch",
         overflowX: "auto"
@@ -547,10 +597,8 @@ export default function DashboardPage() {
               flexDirection: "row",
               alignItems: "center",
               justifyContent: "center",
-              minWidth: 200,
-              maxWidth: 260,
-              width: "100%",
-              padding: "1.6em 1em",
+              width: "100%", // full lebar
+              padding: "1.2em 0.7em",
               background: cardBg,
               borderRadius: "16px",
               boxShadow: cardShadow,
@@ -562,7 +610,7 @@ export default function DashboardPage() {
               transition: "box-shadow 0.2s, transform 0.2s, background 0.2s",
               cursor: "pointer",
               border: `1.5px solid ${borderColor}`,
-              margin: "0.5em 0"
+              margin: "0.2em 0"
             }}
             onMouseOver={e => {
               e.currentTarget.style.boxShadow = theme === "dark"
@@ -596,10 +644,10 @@ export default function DashboardPage() {
                 <span>{item.text}</span>
               </li>
             ))}
-            {penulisanList.filter(item => item && !item.checked).length === 0 && (
-              <li style={{ color: '#aaa', fontStyle: 'italic', fontSize: '1.08em', margin: "0.7em 0" }}>Semua penulisan selesai! 🎉</li>
-            )}
           </ol>
+          {penulisanList.filter(item => item && !item.checked).length === 0 && (
+            <div style={{ color: '#aaa', fontStyle: 'italic', fontSize: '1.08em', margin: "0.7em 0" }}>Semua penulisan selesai! 🎉</div>
+          )}
         </div>
         <div style={{ marginBottom: "1.5em" }}>
           <h3 style={{ fontSize: "1.09em", fontWeight: 700, marginBottom: "0.6em" }}>📋 Tugas</h3>
@@ -610,10 +658,10 @@ export default function DashboardPage() {
                 <span>{item.text}</span>
               </li>
             ))}
-            {tugasList.filter(item => item && !item.checked).length === 0 && (
-              <li style={{ color: '#aaa', fontStyle: 'italic', fontSize: '1.08em', margin: "0.7em 0" }}>Semua tugas selesai! 🎉</li>
-            )}
           </ol>
+          {tugasList.filter(item => item && !item.checked).length === 0 && (
+            <div style={{ color: '#aaa', fontStyle: 'italic', fontSize: '1.08em', margin: "0.7em 0" }}>Semua tugas selesai! 🎉</div>
+          )}
         </div>
         <div>
           <h3 style={{ fontSize: "1.09em", fontWeight: 700, marginBottom: "0.6em" }}>📁 Berkas</h3>
