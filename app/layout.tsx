@@ -92,10 +92,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               padding: "1rem 2rem",
               borderBottom: theme === "dark" ? "1px solid #23272f" : "1px solid #ddd",
               background: theme === "dark" ? "#18181b" : "#fff",
-              position: "sticky",
-              top: 0,
-              zIndex: 10,
-              boxShadow: theme === "dark" ? "0 2px 8px rgba(0,0,0,0.12)" : "0 2px 8px rgba(0,0,0,0.03)",
+              position: "relative",
+              zIndex: 1000,
               display: "flex",
               alignItems: "center",
               justifyContent: "space-between"
@@ -103,7 +101,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <div style={{ fontWeight: 700, fontSize: "1.2em", color: theme === "dark" ? "#fff" : "#000" }}>
                 TA Manager
               </div>
-              <nav style={{ position: "relative" }}>
+              <nav style={{ position: "relative", zIndex: 1001 }}>
                 <button
                   className="hamburger"
                   style={{
@@ -113,6 +111,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                     fontSize: "2em",
                     color: theme === "dark" ? "#fff" : "#000",
                     cursor: "pointer",
+                    zIndex: 1002,
                   }}
                   aria-label="Buka menu"
                   onClick={() => setMenuOpen(!menuOpen)}
@@ -132,6 +131,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                     fontSize: "1.15em",
                     color: theme === "dark" ? "#fff" : "#000",
                     transition: "all 0.2s",
+                    zIndex: 1001,
                   }}
                 >
                   <li><Link href="/dashboard" className="nav-link" onClick={handleNavClick}>Dashboard</Link></li>
@@ -145,7 +145,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 className="theme-toggle-btn"
                 aria-label="Toggle theme"
                 onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-                style={{ marginLeft: "auto" }}
+                style={{ marginLeft: "auto", zIndex: 1002 }}
               >
                 {theme === "dark" ? "🌞" : "🌙"}
               </button>
@@ -161,7 +161,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                     background: #18181b;
                     padding: 1em 0.5em;
                     gap: 0.5em;
-                    z-index: 999;
+                    z-index: 1001;
                     font-size: 1.1em;
                     border-radius: 0 0 12px 12px;
                     box-shadow: 0 8px 32px rgba(99,102,241,0.18);
@@ -173,6 +173,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                   }
                   .hamburger {
                     display: block !important;
+                    position: relative;
+                    z-index: 1002;
                   }
                 }
               `}</style>
