@@ -8,7 +8,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   const [theme, setTheme] = useState<"dark" | "light">("dark");
   const [menuOpen, setMenuOpen] = useState(false);
 
-  // Tutup menu saat klik link
   function handleNavClick() {
     setMenuOpen(false);
   }
@@ -25,7 +24,22 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     }
   }, [theme]);
 
-  // Style dinamis untuk body dan main
+  // Untuk close menu saat klik di luar menu (backdrop)
+  useEffect(() => {
+    function handleOutsideClick(e: MouseEvent) {
+      const navList = document.querySelector(".nav-list-mobile");
+      if (menuOpen && navList && !navList.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
+    }
+    if (menuOpen) {
+      document.addEventListener("mousedown", handleOutsideClick);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleOutsideClick);
+    };
+  }, [menuOpen]);
+
   const bodyStyle = {
     minHeight: "100vh",
     fontFamily: "'Inter', sans-serif",
@@ -52,7 +66,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="id">
       <head>
-        {/* Google Identity Services script for OAuth */}
         <script src="https://accounts.google.com/gsi/client" async defer></script>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
@@ -83,6 +96,40 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             background: ${theme === "dark" ? "#23272f" : "#e0e7ff"};
             color: ${theme === "dark" ? "#a5b4fc" : "#6366f1"};
           }
+          .nav-list-desktop {
+            display: flex;
+            gap: 2em;
+            list-style: none;
+            margin: 0;
+            padding: 0;
+            align-items: center;
+            font-weight: 600;
+            font-size: 1.15em;
+            color: inherit;
+            transition: all 0.2s;
+            z-index: 1001;
+          }
+          .hamburger {
+            display: none;
+            background: none;
+            border: none;
+            font-size: 2em;
+            color: inherit;
+            cursor: pointer;
+            z-index: 1002;
+          }
+          /* Mobile Styles */
+          @media (max-width: 900px) {
+            .nav-list-desktop {
+              display: none !important;
+            }
+            .hamburger {
+              display: block !important;
+              position: relative;
+              z-index: 1002;
+              margin-left: 1.5em;
+            }
+          }
         `}</style>
       </head>
       <body data-theme={theme} style={bodyStyle}>
@@ -101,45 +148,59 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <div style={{ fontWeight: 700, fontSize: "1.2em", color: theme === "dark" ? "#fff" : "#000" }}>
                 TA Manager
               </div>
-              <nav style={{ position: "relative", zIndex: 1001 }}>
-                <button
-                  className="hamburger"
-                  style={{
-                    display: "none",
-                    background: "none",
-                    border: "none",
-                    fontSize: "2em",
-                    color: theme === "dark" ? "#fff" : "#000",
-                    cursor: "pointer",
-                    zIndex: 1002,
-                  }}
-                  aria-label="Buka menu"
-                  onClick={() => setMenuOpen(!menuOpen)}
-                >
-                  &#9776;
-                </button>
-                <ul
-                  className="nav-list"
-                  style={{
-                    display: "flex",
-                    gap: "2.5em",
-                    listStyle: "none",
-                    margin: 0,
-                    padding: 0,
-                    alignItems: "center",
-                    fontWeight: 600,
-                    fontSize: "1.15em",
-                    color: theme === "dark" ? "#fff" : "#000",
-                    transition: "all 0.2s",
-                    zIndex: 1001,
-                  }}
-                >
+              <nav style={{ position: "relative", zIndex: 1001, flex: 1 }}>
+                <ul className="nav-list-desktop">
                   <li><Link href="/dashboard" className="nav-link" onClick={handleNavClick}>Dashboard</Link></li>
                   <li><Link href="/penulisan" className="nav-link" onClick={handleNavClick}>Penulisan</Link></li>
                   <li><Link href="/catatan" className="nav-link" onClick={handleNavClick}>Catatan</Link></li>
                   <li><Link href="/referensi" className="nav-link" onClick={handleNavClick}>Referensi</Link></li>
                   <li><Link href="/kalender" className="nav-link" onClick={handleNavClick}>Kalender</Link></li>
                 </ul>
+                <button
+                  className="hamburger"
+                  aria-label="Buka menu"
+                  onClick={() => setMenuOpen((prev) => !prev)}
+                >
+                  &#9776;
+                </button>
+                {/* Mobile Menu */}
+                <div
+                  style={{
+                    display: menuOpen ? "block" : "none",
+                    position: "fixed",
+                    top: 0,
+                    left: 0,
+                    width: "100vw",
+                    height: "100vh",
+                    background: "rgba(0,0,0,0.5)",
+                    zIndex: 2000,
+                  }}
+                >
+                  <ul
+                    className="nav-list-mobile"
+                    style={{
+                      position: "absolute",
+                      top: "64px",
+                      left: "8px",
+                      right: "8px",
+                      background: theme === "dark" ? "#18181b" : "#fff",
+                      borderRadius: "14px",
+                      boxShadow: "0 8px 32px rgba(99,102,241,0.18)",
+                      padding: "1em 0.5em",
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "0.25em",
+                      fontWeight: 600,
+                      fontSize: "1.15em",
+                    }}
+                  >
+                    <li><Link href="/dashboard" className="nav-link" onClick={handleNavClick}>Dashboard</Link></li>
+                    <li><Link href="/penulisan" className="nav-link" onClick={handleNavClick}>Penulisan</Link></li>
+                    <li><Link href="/catatan" className="nav-link" onClick={handleNavClick}>Catatan</Link></li>
+                    <li><Link href="/referensi" className="nav-link" onClick={handleNavClick}>Referensi</Link></li>
+                    <li><Link href="/kalender" className="nav-link" onClick={handleNavClick}>Kalender</Link></li>
+                  </ul>
+                </div>
               </nav>
               <button
                 className="theme-toggle-btn"
@@ -149,35 +210,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               >
                 {theme === "dark" ? "🌞" : "🌙"}
               </button>
-              <style>{`
-                @media (max-width: 900px) {
-                  .nav-list {
-                    display: ${menuOpen ? "flex" : "none"};
-                    flex-direction: column;
-                    position: absolute;
-                    top: 56px;
-                    left: 0;
-                    right: 0;
-                    background: #18181b;
-                    padding: 1em 0.5em;
-                    gap: 0.5em;
-                    z-index: 1001;
-                    font-size: 1.1em;
-                    border-radius: 0 0 12px 12px;
-                    box-shadow: 0 8px 32px rgba(99,102,241,0.18);
-                  }
-                  .nav-link {
-                    width: 100%;
-                    text-align: left;
-                    padding: 0.7em 1em;
-                  }
-                  .hamburger {
-                    display: block !important;
-                    position: relative;
-                    z-index: 1002;
-                  }
-                }
-              `}</style>
             </header>
             <main style={mainStyle}>
               {children}
