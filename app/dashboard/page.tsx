@@ -1,8 +1,8 @@
 "use client";
 import { useEffect, useState } from "react";
-import app from "../firebase";
-import { getFirestore, doc, getDoc } from "firebase/firestore";
 import { useAuth } from "../../src/context/AuthContext";
+import { getFirestore, doc, getDoc, setDoc } from "firebase/firestore";
+import app from "../firebase";
 import { useRouter } from "next/navigation";
 import { useAuthCalendar } from "../../src/context/AuthCalendarContext";
 
@@ -25,14 +25,18 @@ export default function DashboardPage() {
   const [calendarEvents, setCalendarEvents] = useState<any[]>([]);
   const [calendarLoading, setCalendarLoading] = useState(false);
   const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [checklist, setChecklist] = useState<any[]>([]);
+  const [docRef, setDocRef] = useState<any>(null);
   const db = getFirestore(app);
 
   // Ganti doc menjadi per user
   function getDashboardDoc(uid: string) {
     return doc(db, "dashboard", uid);
   }
+  function getChecklistDoc(uid: string) {
+    return doc(getFirestore(app), "penulisan", uid);
+  }
 
-  const checklistDoc = doc(db, "penulisan", "checklist");
   const { loading } = useAuth();
   const router = useRouter();
 
@@ -69,19 +73,6 @@ export default function DashboardPage() {
       setTheme(bodyTheme === "light" ? "light" : "dark");
     }
   }, []);
-
-  useEffect(() => {
-    async function fetchChecklist() {
-      const snap = await getDoc(checklistDoc);
-      if (snap.exists()) {
-        const data = snap.data();
-        if (Array.isArray(data.penulisanList)) setPenulisanList(data.penulisanList);
-        if (Array.isArray(data.tugasList)) setTugasList(data.tugasList);
-        if (Array.isArray(data.berkasList)) setBerkasList(data.berkasList);
-      }
-    }
-    fetchChecklist();
-  }, [checklistDoc]);
 
   useEffect(() => {
     async function fetchUserEmail() {
@@ -142,6 +133,30 @@ export default function DashboardPage() {
       router.push("/login");
     }
   }, [user, loading, router]);
+
+  useEffect(() => {
+    if (!loading && user) {
+      setDocRef(getChecklistDoc(user.uid));
+    }
+  }, [user, loading]);
+
+  useEffect(() => {
+    async function fetchChecklist() {
+      if (!docRef) return;
+      const snap = await getDoc(docRef);
+      if (snap.exists()) {
+        const data = snap.data() as { penulisanList?: any[], tugasList?: any[], berkasList?: any[], judul?: string, pembimbing1?: string, pembimbing2?: string };
+        setChecklist(data.penulisanList || []);
+        setPenulisanList(data.penulisanList || []);
+        setTugasList(data.tugasList || []);
+        setBerkasList(data.berkasList || []);
+        setJudul(data.judul || "Judul Tugas Akhir");
+        setPembimbing1(data.pembimbing1 || "");
+        setPembimbing2(data.pembimbing2 || "");
+      }
+    }
+    fetchChecklist();
+  }, [docRef]);
 
   if (loading || !user) return <div>Loading...</div>;
 
@@ -318,6 +333,14 @@ export default function DashboardPage() {
     setPembimbing1(tempPembimbing1);
     setPembimbing2(tempPembimbing2);
     setShowEditModal(false);
+    // Simpan ke Firestore agar data sinkron
+    if (docRef) {
+      setDoc(docRef, {
+        judul: tempJudul,
+        pembimbing1: tempPembimbing1,
+        pembimbing2: tempPembimbing2,
+      }, { merge: true });
+    }
   }
 
   // Responsive style for mobile & tablet
@@ -394,6 +417,11 @@ export default function DashboardPage() {
       }}>
         Dashboard Tugas Akhir
       </h1>
+
+      {/* Email User */}
+      <div style={{ textAlign: "center", fontSize: "1.1em", color: "#6366f1", marginBottom: "1.2em", fontWeight: 500 }}>
+        {user.email}
+      </div>
 
       {/* Modal Edit Judul/Pembimbing */}
       {showEditModal && (
