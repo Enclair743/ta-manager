@@ -11,6 +11,14 @@ import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { id as idLocale } from "date-fns/locale";
 import { useAuthCalendar } from "../../src/context/AuthCalendarContext";
 import { useRouter } from "next/navigation";
+import { useAuth } from "../../src/context/AuthContext";
+import { doc, getDoc, getFirestore } from "firebase/firestore";
+import app from "../firebase";
+
+const db = getFirestore(app);
+function getKalenderDoc(uid: string) {
+  return doc(db, "kalender", uid);
+}
 
 export default function KalenderPage() {
   const [events, setEvents] = useState<any[]>([]);
@@ -32,6 +40,8 @@ export default function KalenderPage() {
   const calendarToken = authCalendar?.calendarToken;
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const router = useRouter();
+  const { loading } = useAuth();
+  const [docRef, setDocRef] = useState<any>(null);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -57,6 +67,27 @@ export default function KalenderPage() {
     };
     // eslint-disable-next-line
   }, [calendarToken]);
+
+  useEffect(() => {
+    if (!loading && user) {
+      setDocRef(getKalenderDoc(user.uid));
+    }
+  }, [user, loading]);
+
+  useEffect(() => {
+    async function fetchKalender() {
+      if (!docRef) return;
+      const snap = await getDoc(docRef);
+      if (snap.exists()) {
+        const data = snap.data() as { events?: any[] };
+        setEvents(data.events || []);
+      } else {
+        setEvents([]);
+      }
+    }
+    fetchKalender();
+    // eslint-disable-next-line
+  }, [docRef]);
 
   function toISODateTime(date: Date) {
     if (!date || isNaN(date.getTime())) return "";
@@ -295,8 +326,9 @@ export default function KalenderPage() {
     ? ('linear-gradient(120deg,#18181b 60%,#23272f 100%)' as string)
     : ('linear-gradient(120deg,#eef2ff 60%,#f5f7fb 100%)' as string);
 
+  // Responsive style for mobile & tablet
   const responsiveStyle = `
-    @media (max-width: 600px) {
+    @media (max-width: 900px) {
       body { padding: 0 !important; }
       main {
         padding: 0.7rem !important;
@@ -335,6 +367,16 @@ export default function KalenderPage() {
       .checklist-section, .progress-section, .jadwal-section {
         padding: 1em 0.5em !important;
         max-width: 100vw !important;
+      }
+      input, select, button {
+        font-size: 1em !important;
+        min-width: 0 !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+      }
+      .MuiInputBase-root, .MuiFormControl-root {
+        width: 100% !important;
+        min-width: 0 !important;
       }
     }
   `;
