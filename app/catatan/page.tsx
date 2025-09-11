@@ -4,7 +4,7 @@ import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import jsPDF from "jspdf";
 import app from "../firebase";
-import { getFirestore, collection, addDoc, getDocs, updateDoc, deleteDoc, doc, QueryDocumentSnapshot, DocumentData, getDoc } from "firebase/firestore";
+import { getFirestore, collection, addDoc, getDocs, updateDoc, deleteDoc, doc, QueryDocumentSnapshot, DocumentData, getDoc, setDoc } from "firebase/firestore";
 import { useAuth } from "../../src/context/AuthContext";
 import { useRouter } from "next/navigation";
 
@@ -128,23 +128,23 @@ export default function CatatanTiptapPage() {
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (!user) return;
+    let newList;
     if (form.tanggal && form.isi.replace(/<[^>]+>/g, "").trim()) {
       if (editIdx !== null && filteredCatatan[editIdx]?.id) {
-        updateDoc(doc(db, "catatan", filteredCatatan[editIdx].id!), {
-          tanggal: form.tanggal,
-          nama: form.nama,
-          isi: form.isi
-        });
-        setCatatanList(list => list.map((item, i) => i === editIdx ? { ...form, id: filteredCatatan[editIdx].id } : item));
+        newList = catatanList.map((item, i) => i === editIdx ? { ...form, id: filteredCatatan[editIdx].id } : item);
       } else {
-        addDoc(collection(db, "catatan"), {
-          tanggal: form.tanggal,
-          nama: form.nama,
-          isi: form.isi
-        }).then(ref => {
-          setCatatanList(list => [...list, { ...form, id: ref.id }]);
-        });
+        newList = [...catatanList, { ...form, id: Date.now().toString() }];
       }
+      const docRef = getCatatanDoc(user.uid);
+      getDoc(docRef).then(snap => {
+        if (snap.exists()) {
+          updateDoc(docRef, { catatan: newList });
+        } else {
+          setDoc(docRef, { catatan: newList });
+        }
+      });
+      setCatatanList(newList);
       setShowForm(false);
       setEditIdx(null);
       setForm({ tanggal: "", nama: "", isi: "" });
@@ -160,12 +160,18 @@ export default function CatatanTiptapPage() {
   }
 
   function handleDelete(idx: number) {
+    if (!user) return;
     if (confirm("Yakin ingin menghapus catatan ini?")) {
-      const id = filteredCatatan[idx].id;
-      if (id) {
-        deleteDoc(doc(db, "catatan", id));
-        setCatatanList(list => list.filter((item) => item.id !== id));
-      }
+      const newList = catatanList.filter((item, i) => i !== idx);
+      const docRef = getCatatanDoc(user.uid);
+      getDoc(docRef).then(snap => {
+        if (snap.exists()) {
+          updateDoc(docRef, { catatan: newList });
+        } else {
+          setDoc(docRef, { catatan: newList });
+        }
+      });
+      setCatatanList(newList);
     }
     setSelectedIdx(null);
     setSelectedPdfIdxs(selectedPdfIdxs.filter(x => x !== idx));
@@ -294,7 +300,7 @@ export default function CatatanTiptapPage() {
   if (loading || !user) return <div>Loading...</div>;
 
   return (
-    <div style={{ minHeight: "100vh", background: colorMainBg as string, fontFamily: "Inter, Segoe UI, sans-serif", paddingBottom: "6rem", transition: "background 0.5s" }}>
+    <div className="min-h-screen">
       <style>{responsiveStyle}</style>
       <div style={{
         maxWidth: 820,
