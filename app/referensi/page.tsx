@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import app from "../firebase";
-import { getFirestore, collection, addDoc, getDocs, updateDoc, deleteDoc, doc, DocumentData, QueryDocumentSnapshot, getDoc } from "firebase/firestore";
+import { getFirestore, collection, addDoc, getDocs, updateDoc, deleteDoc, doc, DocumentData, QueryDocumentSnapshot, getDoc, setDoc } from "firebase/firestore";
 import jsPDF from "jspdf";
 import { useAuth } from "../../src/context/AuthContext";
 import { useRouter } from "next/navigation";
@@ -298,25 +298,27 @@ export default function ReferensiPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (!user) return;
     let fileUrl: string | undefined = undefined;
     let fileName: string | undefined = undefined;
     if (file) {
       fileUrl = URL.createObjectURL(file);
       fileName = file.name;
     }
+    let newList;
     if (editIdx !== null && filtered[editIdx]?.id) {
-      await updateDoc(doc(db, "referensi", filtered[editIdx].id!), {
-        jenis, data: form, fileUrl, fileName
-      });
-      setReferensiList(referensiList.map((r, i) =>
-        i === editIdx ? { ...r, jenis, data: form, fileUrl, fileName } : r
-      ));
+      newList = referensiList.map((r, i) => i === editIdx ? { ...r, jenis, data: form, fileUrl, fileName } : r);
     } else {
-      const ref = await addDoc(collection(db, "referensi"), {
-        jenis, data: form, fileUrl, fileName
-      });
-      setReferensiList([...referensiList, { id: ref.id, jenis, data: form, fileUrl, fileName }]);
+      newList = [...referensiList, { id: Date.now().toString(), jenis, data: form, fileUrl, fileName }];
     }
+    const docRef = getReferensiDoc(user.uid);
+    const snap = await getDoc(docRef);
+    if (snap.exists()) {
+      await updateDoc(docRef, { referensiList: newList });
+    } else {
+      await setDoc(docRef, { referensiList: newList });
+    }
+    setReferensiList(newList);
     resetForm();
     setShowModal(false);
   }
@@ -330,12 +332,17 @@ export default function ReferensiPage() {
   }
 
   async function handleDelete(idx: number) {
+    if (!user) return;
     if (!confirm("Yakin ingin menghapus referensi ini?")) return;
-    const id = filtered[idx].id;
-    if (id) {
-      await deleteDoc(doc(db, "referensi", id));
-      setReferensiList(referensiList.filter(r => r.id !== id));
+    const newList = referensiList.filter((r, i) => i !== idx);
+    const docRef = getReferensiDoc(user.uid);
+    const snap = await getDoc(docRef);
+    if (snap.exists()) {
+      await updateDoc(docRef, { referensiList: newList });
+    } else {
+      await setDoc(docRef, { referensiList: newList });
     }
+    setReferensiList(newList);
   }
 
   function resetForm() {
@@ -463,7 +470,7 @@ export default function ReferensiPage() {
   `;
 
   return (
-    <div style={{ background: colorMainBg }}>
+    <div className="min-h-screen">
       <style>{responsiveStyle}</style>
       <h1 style={{
         fontSize: "1.5rem",
