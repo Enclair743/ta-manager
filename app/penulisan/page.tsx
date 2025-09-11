@@ -13,13 +13,14 @@ type ChecklistItem = {
   checked: boolean;
   fileUrl?: string;
   fileName?: string;
+  subBab?: ChecklistItem[];
 };
 
 const defaultPenulisan = [
   { id: uuidv4(), text: "Judul", checked: false },
-  { id: uuidv4(), text: "Bab 1 - Pendahuluan", checked: false },
-  { id: uuidv4(), text: "Bab 2 - Tinjauan Pustaka", checked: false },
-  { id: uuidv4(), text: "Bab 3 - Metodologi", checked: false },
+  { id: uuidv4(), text: "Bab 1 - Pendahuluan", checked: false, subBab: [] },
+  { id: uuidv4(), text: "Bab 2 - Tinjauan Pustaka", checked: false, subBab: [] },
+  { id: uuidv4(), text: "Bab 3 - Metodologi", checked: false, subBab: [] },
   { id: uuidv4(), text: "Bab 4 - Hasil & Pembahasan", checked: false },
   { id: uuidv4(), text: "Bab 5 - Kesimpulan", checked: false },
 ];
@@ -324,6 +325,43 @@ function PenulisanPage() {
     if (docRef) setDoc(docRef, { penulisanList, tugasList, berkasList: updated, onedrive, drive }, { merge: true });
   }
 
+  // State untuk sub-bab
+  const [subBabInput, setSubBabInput] = useState<{[key:string]:string}>({});
+  const [showSubBabInput, setShowSubBabInput] = useState<{[key:string]:boolean}>({});
+  // State untuk modal tambah sub-bab
+  const [showAddSubBabModal, setShowAddSubBabModal] = useState(false);
+  const [addSubBabValue, setAddSubBabValue] = useState("");
+  const [addSubBabIdx, setAddSubBabIdx] = useState<number|null>(null);
+  function handleSubBabInputChange(babId: string, value: string) {
+    setSubBabInput(prev => ({ ...prev, [babId]: value }));
+  }
+  async function handleSubBabCheck(babIdx: number, subIdx: number) {
+    const updated = [...penulisanList];
+    if (!updated[babIdx].subBab) return;
+    updated[babIdx].subBab![subIdx].checked = !updated[babIdx].subBab![subIdx].checked;
+    setPenulisanList(updated);
+    if (docRef) await setDoc(docRef, { penulisanList: updated, tugasList, berkasList, onedrive, drive }, { merge: true });
+  }
+  async function handleAddSubBab(babIdx: number) {
+    const bab = penulisanList[babIdx];
+    const value = subBabInput[bab.id]?.trim();
+    if (!value) return;
+    const updated = [...penulisanList];
+    if (!updated[babIdx].subBab) updated[babIdx].subBab = [];
+    updated[babIdx].subBab!.push({ id: uuidv4(), text: value, checked: false });
+    setPenulisanList(updated);
+    setSubBabInput(prev => ({ ...prev, [bab.id]: "" }));
+    if (docRef) await setDoc(docRef, { penulisanList: updated, tugasList, berkasList, onedrive, drive }, { merge: true });
+  }
+
+  // State untuk modal edit bab dan sub-bab
+  const [showEditBabModal, setShowEditBabModal] = useState(false);
+  const [editBabIdx, setEditBabIdx] = useState<number|null>(null);
+  const [editBabName, setEditBabName] = useState("");
+  const [editSubBabList, setEditSubBabList] = useState<ChecklistItem[]>([]);
+  const [editSubBabIdx, setEditSubBabIdx] = useState<number|null>(null);
+  const [editSubBabName, setEditSubBabName] = useState("");
+
   // Style helpers
   const cardStyle = {
     background: theme === "dark"
@@ -416,58 +454,68 @@ function PenulisanPage() {
               transition: "box-shadow 0.2s, background 0.2s"
             }}>
               <div style={{ fontWeight: 500, fontSize: "0.98em", wordBreak: "break-word", marginBottom: "0.7em" }}>{item.text}</div>
-              <div style={{ display: "flex", gap: "0.7em", width: "100%" }}>
+              <div style={{ display: "flex", gap: "0.7em", width: "100%", marginBottom: "0.5em" }}>
                 <input
                   type="checkbox"
                   checked={item.checked}
                   onChange={() => onCheck(i)}
-                  style={{
-                    accentColor: "#6366f1",
-                    width: "1em",
-                    height: "1em",
-                  }}
+                  style={{ accentColor: "#6366f1", width: "1em", height: "1em" }}
                 />
-                {editId === item.id ? (
-                  <>
-                    <input
-                      type="text"
-                      value={editText}
-                      onChange={e => setEditText(e.target.value)}
-                      style={{
-                        flex: 1,
-                        padding: "0.4em",
-                        borderRadius: "6px",
-                        border: "1px solid #6366f1",
-                        fontSize: "0.97em"
-                      }}
-                    />
-                    <button onClick={onEditSave}
-                      style={{ ...btn, padding: "0.4em 0.7em", fontSize: "0.95em" }}>Simpan</button>
-                    <button onClick={() => setEditId(null)}
-                      style={{ ...btnGray, padding: "0.4em 0.7em", fontSize: "0.95em" }}>Batal</button>
-                  </>
-                ) : (
-                  <>
-                    <button onClick={() => onEdit(item)}
-                      style={{ ...btn, padding: "0.4em 0.7em", fontSize: "0.95em" }}>Edit</button>
-                    <button onClick={() => onDelete(item.id)}
-                      style={{ ...btnRed, padding: "0.4em 0.7em", fontSize: "0.95em" }}>Hapus</button>
-                  </>
-                )}
+                <button onClick={() => {
+                  setShowEditBabModal(true);
+                  setEditBabIdx(i);
+                  setEditBabName(item.text);
+                  setEditSubBabList(item.subBab ? [...item.subBab] : []);
+                  setEditSubBabIdx(null);
+                  setEditSubBabName("");
+                }} style={{ ...btn, padding: "0.4em 0.7em", fontSize: "0.95em" }}>Edit</button>
+                <button onClick={() => onDelete(item.id)} style={{ ...btnRed, padding: "0.4em 0.7em", fontSize: "0.95em" }}>Hapus</button>
+                <button type="button" onClick={() => {
+                  setAddSubBabIdx(i);
+                  setAddSubBabValue("");
+                  setShowAddSubBabModal(true);
+                  if (!item.subBab) {
+                    const updated = [...penulisanList];
+                    updated[i].subBab = [];
+                    setPenulisanList(updated);
+                  }
+                }} style={{ ...btn, padding: "0.4em 0.7em", fontSize: "0.95em" }}>+</button>
               </div>
+              {/* SubBab section */}
+              {item.subBab && item.subBab.length > 0 && (
+                <div style={{ marginLeft: "1.5em", marginTop: "0.7em", display: "flex", flexDirection: "column", gap: "0.6em" }}>
+                  {item.subBab.map((sub, si) => (
+                    <div key={sub.id} style={{
+                      display: "flex",
+                      alignItems: "center",
+                      background: theme === "dark" ? "#23272f" : "#f3f4f6",
+                      borderRadius: "8px",
+                      boxShadow: theme === "dark"
+                        ? "0 2px 8px rgba(99,102,241,0.10)"
+                        : "0 2px 8px rgba(99,102,241,0.06)",
+                      border: theme === "dark" ? "1px solid #353a47" : "1px solid #e0e7ff",
+                      padding: "0.5em 1em",
+                      minHeight: "38px",
+                      gap: "0.7em"
+                    }}>
+                      <input
+                        type="checkbox"
+                        checked={sub.checked}
+                        onChange={() => handleSubBabCheck(i, si)}
+                        style={{ accentColor: colorAccent, width: "1.1em", height: "1.1em" }}
+                      />
+                      <span style={{ fontSize: "1em", fontWeight: 500, color: theme === "dark" ? colorAccentLight : colorAccent }}>{sub.text}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </li>
           ))}
         </ul>
         <div style={{ display: "flex", gap: "0.5em", marginTop: "0.3em" }}>
           <button
             onClick={() => openAddModal(placeholder.includes("penulisan") ? "penulisan" : placeholder.includes("tugas") ? "tugas" : "berkas")}
-            style={{
-              ...btn,
-              padding: "0.5em 1em",
-              fontWeight: 500,
-              fontSize: "0.95em",
-              width: "100%"
-            }}
+            style={{ ...btn, padding: "0.5em 1em", fontWeight: 500, fontSize: "0.95em", width: "100%" }}
           >
             + Tambah
           </button>
@@ -477,333 +525,242 @@ function PenulisanPage() {
   }
 
   return (
-    <div style={{ maxWidth: 700, margin: "0 auto", marginTop: 30 }}>
-      {/* <style>{responsiveStyle}</style> */}
-      <h1 style={{
-        fontSize: "2rem",
-        marginBottom: "1em",
-        color: colorAccent,
-        background: theme === 'dark'
-          ? ('linear-gradient(90deg,#c7d2fe,#7c3aed)' as string)
-          : ('linear-gradient(90deg,#7c3aed,#a5b4fc)' as string),
-        backgroundClip: "text",
-        WebkitBackgroundClip: "text",
-        WebkitTextFillColor: "transparent",
-        fontWeight: 700,
-        letterSpacing: "-1px"
-      }}>
-        Penulisan Tugas Akhir
-      </h1>
+    <div style={{ padding: "0 1.5em", maxWidth: "800px", margin: "0 auto", width: "100%" }}>
+      <div style={{ marginTop: "2em", marginBottom: "4em" }}>
+        <h1 style={{
+          fontSize: "1.8em",
+          fontWeight: 700,
+          marginBottom: "0.4em",
+          color: theme === "dark" ? "#f3f4f6" : "#111827",
+          textAlign: "center"
+        }}>Checklist Penulisan</h1>
 
-      {/* --- LINK DOKUMEN --- */}
-      <div style={{ ...cardStyle, background: colorCardBg, color: colorText, boxShadow: colorGlassShadow, border: colorGlassBorder, marginBottom: 28 }}>
-        <h2 style={{ marginBottom: 16, fontSize: "1.18em" }}>Dokumen Tugas Akhir</h2>
-        <div style={{ marginBottom: 12 }}>
-          <label style={{ fontWeight: 500, marginRight: 10 }}>Link OneDrive Dokumen TA:</label>
-          <div style={{ display: "flex", flexDirection: "column", gap: "0.6em", marginTop: 5 }}>
-            <input
-              type="text"
-              value={onedrive}
-              onChange={e => handleOnedriveChange(e.target.value)}
-              placeholder="Paste link OneDrive TA..."
-              style={{
-                width: "100%",
-                padding: "0.8em",
-                borderRadius: "10px",
-                border: "1.5px solid #6366f1",
-                fontSize: "1em",
-                background: theme === "dark" ? "#23272f" : "#fff",
-                color: theme === "dark" ? "#f3f4f6" : "#222"
-              }}
-            />
-            <div style={{ display: "flex", gap: "0.6em" }}>
-              <button
-                onClick={handleCopyOneDrive}
-                style={{ ...btn, flex: 1, padding: "0.7em 0", fontWeight: 500 }}>
-                Copy
-              </button>
-              {onedrive && (
-                <a
-                  href={onedrive}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{
-                    ...btnGray,
-                    flex: 1,
-                    padding: "0.7em 0",
-                    textAlign: "center",
-                    textDecoration: "none"
-                  }}>
-                  Buka
-                </a>
-              )}
-            </div>
-            {showCopyOneDrive && (
-              <span style={{ color: "#6366f1", marginLeft: 2, fontWeight: 500 }}>Link berhasil dicopy!</span>
-            )}
-          </div>
+        {/* Checklist Penulisan */}
+        <div style={{ marginBottom: "3em" }}>
+          <h2 style={{
+            fontSize: "1.4em",
+            fontWeight: 600,
+            marginBottom: "1.2em",
+            color: theme === "dark" ? "#e0e7ff" : "#111827",
+            borderBottom: `2px solid ${colorAccent}`,
+            display: "inline-block",
+            paddingBottom: "0.3em"
+          }}>Checklist Penulisan</h2>
+          {renderChecklistList({
+            list: penulisanList,
+            onCheck: handlePenulisanCheck,
+            onEdit: startEditPenulisan,
+            onDelete: handlePenulisanDelete,
+            editId: editPenulisanId,
+            editText: editPenulisanText,
+            setEditText: setEditPenulisanText,
+            onEditSave: handlePenulisanEditSave,
+            setEditId: setEditPenulisanId,
+            placeholder: "Tambah penulisan...",
+            newValue: newPenulisan,
+            setNewValue: setNewPenulisan,
+            onAdd: handlePenulisanAdd,
+          })}
         </div>
+
+        {/* Checklist Tugas */}
+        <div style={{ marginBottom: "3em" }}>
+          <h2 style={{
+            fontSize: "1.4em",
+            fontWeight: 600,
+            marginBottom: "1.2em",
+            color: theme === "dark" ? "#e0e7ff" : "#111827",
+            borderBottom: `2px solid ${colorAccent}`,
+            display: "inline-block",
+            paddingBottom: "0.3em"
+          }}>Checklist Tugas</h2>
+          {renderChecklistList({
+            list: tugasList,
+            onCheck: handleTugasCheck,
+            onEdit: startEditTugas,
+            onDelete: handleTugasDelete,
+            editId: editTugasId,
+            editText: editTugasText,
+            setEditText: setEditTugasText,
+            onEditSave: handleTugasEditSave,
+            setEditId: setEditTugasId,
+            placeholder: "Tambah tugas...",
+            newValue: newTugas,
+            setNewValue: setNewTugas,
+            onAdd: handleTugasAdd,
+          })}
+        </div>
+
+        {/* Checklist Berkas */}
         <div>
-          <label style={{ fontWeight: 500, marginRight: 10 }}>Link Google Drive Dokumen TA:</label>
-          <div style={{ display: "flex", flexDirection: "column", gap: "0.6em", marginTop: 5 }}>
-            <input
-              type="text"
-              value={drive}
-              onChange={e => handleDriveChange(e.target.value)}
-              placeholder="Paste link Google Drive TA..."
-              style={{
-                width: "100%",
-                padding: "0.8em",
-                borderRadius: "10px",
-                border: "1.5px solid #6366f1",
-                fontSize: "1em",
-                background: theme === "dark" ? "#23272f" : "#fff",
-                color: theme === "dark" ? "#f3f4f6" : "#222"
-              }}
-            />
-            <div style={{ display: "flex", gap: "0.6em" }}>
-              <button
-                onClick={handleCopyDrive}
-                style={{ ...btn, flex: 1, padding: "0.7em 0", fontWeight: 500 }}>
-                Copy
-              </button>
-              {drive && (
-                <a
-                  href={drive}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{
-                    ...btnGray,
-                    flex: 1,
-                    padding: "0.7em 0",
-                    textAlign: "center",
-                    textDecoration: "none"
-                  }}>
-                  Buka
-                </a>
-              )}
-            </div>
-            {showCopyDrive && (
-              <span style={{ color: "#6366f1", marginLeft: 2, fontWeight: 500 }}>Link berhasil dicopy!</span>
-            )}
-          </div>
+          <h2 style={{
+            fontSize: "1.4em",
+            fontWeight: 600,
+            marginBottom: "1.2em",
+            color: theme === "dark" ? "#e0e7ff" : "#111827",
+            borderBottom: `2px solid ${colorAccent}`,
+            display: "inline-block",
+            paddingBottom: "0.3em"
+          }}>Checklist Berkas</h2>
+          {renderChecklistList({
+            list: berkasList,
+            onCheck: handleBerkasCheck,
+            onEdit: startEditBerkas,
+            onDelete: handleBerkasDelete,
+            editId: editBerkasId,
+            editText: editBerkasText,
+            setEditText: setEditBerkasText,
+            onEditSave: handleBerkasEditSave,
+            setEditId: setEditBerkasId,
+            placeholder: "Tambah berkas...",
+            newValue: newBerkas,
+            setNewValue: setNewBerkas,
+            onAdd: handleBerkasAdd,
+          })}
         </div>
-      </div>
 
-      {/* Checklist Penulisan */}
-      <div style={cardStyle}>
-        <h2 style={{
-          marginBottom: 10,
-          fontSize: "1.5em",
-          fontWeight: 700,
-          color: theme === "dark" ? "#a5b4fc" : "#6366f1"
-        }}>Checklist Penulisan</h2>
-        {renderChecklistList({
-          list: penulisanList,
-          onCheck: handlePenulisanCheck,
-          onEdit: startEditPenulisan,
-          onDelete: handlePenulisanDelete,
-          editId: editPenulisanId,
-          editText: editPenulisanText,
-          setEditText: setEditPenulisanText,
-          onEditSave: handlePenulisanEditSave,
-          setEditId: setEditPenulisanId,
-          placeholder: "Tambah item penulisan...",
-          newValue: newPenulisan,
-          setNewValue: setNewPenulisan,
-          onAdd: handlePenulisanAdd,
-        })}
-      </div>
-
-      {/* Checklist Tugas */}
-      <div style={cardStyle}>
-        <h2 style={{
-          marginBottom: 10,
-          fontSize: "1.5em",
-          fontWeight: 700,
-          color: theme === "dark" ? "#a5b4fc" : "#6366f1"
-        }}>Checklist Tugas</h2>
-        {renderChecklistList({
-          list: tugasList,
-          onCheck: handleTugasCheck,
-          onEdit: startEditTugas,
-          onDelete: handleTugasDelete,
-          editId: editTugasId,
-          editText: editTugasText,
-          setEditText: setEditTugasText,
-          onEditSave: handleTugasEditSave,
-          setEditId: setEditTugasId,
-          placeholder: "Tambah tugas baru...",
-          newValue: newTugas,
-          setNewValue: setNewTugas,
-          onAdd: handleTugasAdd,
-        })}
-      </div>
-
-      {/* Checklist Berkas - di bagian paling bawah */}
-      <div style={cardStyle}>
-        <h2 style={{
-          marginBottom: 10,
-          fontSize: "1.5em",
-          fontWeight: 700,
-          color: theme === "dark" ? "#a5b4fc" : "#6366f1"
-        }}>Checklist Berkas</h2>
-        <ul style={{
-          listStyle: "none",
-          padding: 0,
-          marginBottom: "0.5em",
-        }}>
-          {berkasList.map((item, i) => (
-            <li key={item.id} style={{
-              background: item.checked
-                ? (theme === "dark" ? "#23272f" : "#e0e7ff")
-                : (theme === "dark" ? "#23272f" : "#fff"),
-              borderRadius: "5px",
-              padding: "0.45em 0.5em 0.3em 0.5em",
-              boxShadow: item.checked
-                ? "0 1px 4px rgba(99,102,241,0.06)"
-                : "0 1px 2px rgba(99,102,241,0.02)",
-              border: item.checked
-                ? "1px solid #6366f1"
-                : "1px solid #353a47",
-              color: theme === "dark" ? "#f3f4f6" : "#222",
-              marginBottom: "0.5em",
-              transition: "box-shadow 0.2s, background 0.2s"
-            }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "0.4em", width: "100%", marginBottom: "0.3em" }}>
-                <input
-                  type="checkbox"
-                  checked={item.checked}
-                  onChange={() => handleBerkasCheck(i)}
-                  style={{
-                    accentColor: "#6366f1",
-                    width: "0.95em",
-                    height: "0.95em",
-                  }}
-                />
-                <span style={{ flex: 1, fontWeight: 500, fontSize: "0.93em" }}>{item.text}</span>
-                <button onClick={() => startEditBerkas(item)}
-                  style={{ ...btn, padding: "0.2em 0.6em", fontSize: "0.91em" }}>Edit</button>
-                <button onClick={() => handleBerkasDelete(item.id)}
-                  style={{ ...btnRed, padding: "0.2em 0.6em", fontSize: "0.91em" }}>Hapus</button>
-              </div>
-              {/* Upload opsional */}
-              <div style={{ marginTop: "0.1em", width: "100%", display: "flex", alignItems: "center", gap: "0.4em" }}>
-                {item.fileUrl ? (
-                  <>
-                    <a href={item.fileUrl} target="_blank" rel="noopener noreferrer"
-                      style={{
-                        color: "#6366f1",
-                        fontWeight: 500,
-                        textDecoration: "underline",
-                        fontSize: "0.91em"
-                      }}>
-                      {item.fileName || "Download Berkas"}
-                    </a>
-                    <button
-                      onClick={() => handleBerkasRemoveFile(item.id)}
-                      style={{ ...btnRed, padding: "0.2em 0.6em", fontSize: "0.91em" }}>Hapus File</button>
-                  </>
-                ) : (
-                  <form
-                    onSubmit={e => {
-                      e.preventDefault();
-                      const input = (e.target as HTMLFormElement).elements.namedItem("file") as HTMLInputElement;
-                      if (input?.files && input.files[0]) {
-                        handleBerkasUpload(item.id, input.files[0]);
-                      }
-                    }}
-                    style={{ display: "flex", alignItems: "center", gap: "0.4em", width: "100%", flexWrap: "wrap", maxWidth: "100%" }}
-                  >
-                    <input
-                      type="file"
-                      name="file"
-                      style={{
-                        padding: "0.1em",
-                        borderRadius: "4px",
-                        border: "1px solid #6366f1",
-                        fontSize: "0.91em",
-                        width: "calc(100% - 90px)",
-                        maxWidth: "220px"
-                      }}
-                      disabled={!!uploadingId}
-                      accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.zip"
-                    />
-                    <button
-                      type="submit"
-                      disabled={!!uploadingId}
-                      style={{ ...btn, padding: "0.1em 0.6em", fontSize: "0.91em", maxWidth: "80px", minWidth: "70px", wordBreak: "keep-all" }}>
-                      {uploadingId === item.id ? "Mengunggah..." : "Upload"}
-                    </button>
-                  </form>
-                )}
-                {uploadError && uploadingId === item.id && (
-                  <span style={{ color: "#ef4444", marginLeft: 6, fontWeight: 500, fontSize: "0.91em" }}>{uploadError}</span>
-                )}
-              </div>
-            </li>
-          ))}
-        </ul>
-        <div style={{ display: "flex", gap: "0.5em", marginTop: "0.3em" }}>
-          <button
-            onClick={() => openAddModal("berkas")}
-            style={{
-              ...btn,
-              padding: "0.5em 1em",
-              fontWeight: 500,
-              fontSize: "0.95em",
-              width: "100%"
-            }}
-          >
-            + Tambah
-          </button>
-        </div>
-      </div>
-
-      {/* Popup/modal komponen */}
-      {showAddModal && (
-        <div style={{
-          position: "fixed",
-          top: 0,
-          left: 0,
-          width: "100vw",
-          height: "100vh",
-          background: "rgba(0,0,0,0.35)",
-          zIndex: 9999,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center"
-        }}>
+        {/* Modal edit bab & sub-bab */}
+        {showEditBabModal && (
           <div style={{
-            background: theme === "dark" ? "#23272f" : "#fff",
-            borderRadius: "16px",
-            padding: "2em 1.5em",
-            minWidth: 280,
-            boxShadow: "0 8px 32px rgba(99,102,241,0.18)",
-            color: theme === "dark" ? "#f3f4f6" : "#222"
+            position: "fixed",
+            top: 0,
+            left: 0,
+            width: "100vw",
+            height: "100vh",
+            background: "rgba(0,0,0,0.35)",
+            zIndex: 9999,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center"
           }}>
-            <h3 style={{ marginBottom: "1em", fontWeight: 700, fontSize: "1.1em" }}>Tambah Item {modalType.charAt(0).toUpperCase() + modalType.slice(1)}</h3>
-            <input
-              type="text"
-              value={modalValue}
-              onChange={e => setModalValue(e.target.value)}
-              placeholder={`Nama item ${modalType}...`}
-              style={{
-                width: "100%",
-                padding: "0.7em",
-                borderRadius: "8px",
-                border: "1.5px solid #6366f1",
-                fontSize: "1em",
-                marginBottom: "1em"
-              }}
-            />
-            <div style={{ display: "flex", gap: "0.7em" }}>
-              <button onClick={handleModalSave} style={{ ...btn, flex: 1 }}>Simpan</button>
-              <button onClick={() => setShowAddModal(false)} style={{ ...btnGray, flex: 1 }}>Batal</button>
+            <div style={{
+              background: theme === "dark" ? "#23272f" : "#fff",
+              borderRadius: "16px",
+              padding: "2em 1.5em",
+              minWidth: 320,
+              boxShadow: "0 8px 32px rgba(99,102,241,0.18)",
+              color: theme === "dark" ? "#f3f4f6" : "#222"
+            }}>
+              <h3 style={{ marginBottom: "1em", fontWeight: 700, fontSize: "1.1em" }}>Edit Bab & Sub-Bab</h3>
+              <input
+                type="text"
+                value={editBabName}
+                onChange={e => setEditBabName(e.target.value)}
+                placeholder="Nama bab..."
+                style={{ width: "100%", padding: "0.7em", borderRadius: "8px", border: "1.5px solid #6366f1", fontSize: "1em", marginBottom: "1em" }}
+              />
+              <div style={{ marginBottom: "1em" }}>
+                <div style={{ fontWeight: 500, marginBottom: "0.5em" }}>Sub-Bab:</div>
+                {editSubBabList.map((sub, si) => (
+                  <div key={sub.id} style={{ display: "flex", gap: "0.5em", marginBottom: "0.5em" }}>
+                    {editSubBabIdx === si ? (
+                      <>
+                        <input
+                          type="text"
+                          value={editSubBabName}
+                          onChange={e => setEditSubBabName(e.target.value)}
+                          style={{ flex: 1, padding: "0.4em", borderRadius: "6px", border: "1px solid #6366f1" }}
+                        />
+                        <button onClick={() => {
+                          const updatedList = [...editSubBabList];
+                          updatedList[si].text = editSubBabName;
+                          setEditSubBabList(updatedList);
+                          setEditSubBabIdx(null);
+                          setEditSubBabName("");
+                        }} style={{ ...btn, padding: "0.3em 0.7em", fontSize: "0.95em" }}>Simpan</button>
+                        <button onClick={() => { setEditSubBabIdx(null); setEditSubBabName(""); }} style={{ ...btnGray, padding: "0.3em 0.7em", fontSize: "0.95em" }}>Batal</button>
+                      </>
+                    ) : (
+                      <>
+                        <span style={{ flex: 1 }}>{sub.text}</span>
+                        <button onClick={() => { setEditSubBabIdx(si); setEditSubBabName(sub.text); }} style={{ ...btn, padding: "0.3em 0.7em", fontSize: "0.95em" }}>Edit</button>
+                        <button onClick={() => {
+                          const updatedList = editSubBabList.filter((_, idx) => idx !== si);
+                          setEditSubBabList(updatedList);
+                        }} style={{ ...btnRed, padding: "0.3em 0.7em", fontSize: "0.95em" }}>Hapus</button>
+                      </>
+                    )}
+                  </div>
+                ))}
+              </div>
+              <div style={{ display: "flex", gap: "0.7em" }}>
+                <button onClick={async () => {
+                  if (editBabIdx === null) return;
+                  const updated = [...penulisanList];
+                  updated[editBabIdx].text = editBabName;
+                  updated[editBabIdx].subBab = editSubBabList;
+                  setPenulisanList(updated);
+                  setShowEditBabModal(false);
+                  setEditBabIdx(null);
+                  setEditBabName("");
+                  setEditSubBabList([]);
+                  setEditSubBabIdx(null);
+                  setEditSubBabName("");
+                  if (docRef) await setDoc(docRef, { penulisanList: updated, tugasList, berkasList, onedrive, drive }, { merge: true });
+                }} style={{ ...btn, flex: 1 }}>Simpan</button>
+                <button onClick={() => {
+                  setShowEditBabModal(false);
+                  setEditBabIdx(null);
+                  setEditBabName("");
+                  setEditSubBabList([]);
+                  setEditSubBabIdx(null);
+                  setEditSubBabName("");
+                }} style={{ ...btnGray, flex: 1 }}>Batal</button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
+        {/* Modal tambah sub-bab */}
+        {showAddSubBabModal && (
+          <div style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            width: "100vw",
+            height: "100vh",
+            background: "rgba(0,0,0,0.35)",
+            zIndex: 9999,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center"
+          }}>
+            <div style={{
+              background: theme === "dark" ? "#23272f" : "#fff",
+              borderRadius: "16px",
+              padding: "2em 1.5em",
+              minWidth: 280,
+              boxShadow: "0 8px 32px rgba(99,102,241,0.18)",
+              color: theme === "dark" ? "#f3f4f6" : "#222"
+            }}>
+              <h3 style={{ marginBottom: "1em", fontWeight: 700, fontSize: "1.1em" }}>Tambah Sub-Bab</h3>
+              <input
+                type="text"
+                value={addSubBabValue}
+                onChange={e => setAddSubBabValue(e.target.value)}
+                placeholder="Nama sub-bab..."
+                style={{ width: "100%", padding: "0.7em", borderRadius: "8px", border: "1.5px solid #6366f1", fontSize: "1em", marginBottom: "1em" }}
+              />
+              <div style={{ display: "flex", gap: "0.7em" }}>
+                <button onClick={async () => {
+                  if (!addSubBabValue.trim() || addSubBabIdx === null) return;
+                  const updated = [...penulisanList];
+                  updated[addSubBabIdx].subBab!.push({ id: uuidv4(), text: addSubBabValue.trim(), checked: false });
+                  setPenulisanList(updated);
+                  setShowAddSubBabModal(false);
+                  setAddSubBabValue("");
+                  setAddSubBabIdx(null);
+                  if (docRef) await setDoc(docRef, { penulisanList: updated, tugasList, berkasList, onedrive, drive }, { merge: true });
+                }} style={{ ...btn, flex: 1 }}>Simpan</button>
+                <button onClick={() => {
+                  setShowAddSubBabModal(false);
+                  setAddSubBabValue("");
+                  setAddSubBabIdx(null);
+                }} style={{ ...btnGray, flex: 1 }}>Batal</button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
