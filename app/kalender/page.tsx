@@ -190,6 +190,15 @@ export default function KalenderPage() {
             description: "__FROM_APP__",
             start: { dateTime: startISO, timeZone },
             end: { dateTime: endISO, timeZone },
+            reminders: {
+              useDefault: false,
+              overrides: [
+                { method: "popup", minutes: 5 },
+                { method: "popup", minutes: 15 },
+                { method: "popup", minutes: 60 },
+                { method: "popup", minutes: 1440 }
+              ]
+            }
           }),
         }
       );
@@ -256,6 +265,15 @@ export default function KalenderPage() {
             description: "__FROM_APP__",
             start: { dateTime: startISO, timeZone },
             end: { dateTime: endISO, timeZone },
+            reminders: {
+              useDefault: false,
+              overrides: [
+                { method: "popup", minutes: 5 },
+                { method: "popup", minutes: 15 },
+                { method: "popup", minutes: 60 },
+                { method: "popup", minutes: 1440 }
+              ]
+            }
           }),
         }
       );
@@ -393,7 +411,7 @@ export default function KalenderPage() {
   `;
 
   return (
-    <div style={{ background: colorMainBg }}>
+    <div className="min-h-screen">
       <style>{responsiveStyle}</style>
       <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={idLocale}>
         <div>
