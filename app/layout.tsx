@@ -119,6 +119,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             padding: 0.35em 1em;
             border-radius: 10px;
             transition: background 0.2s;
+            max-width: 60px;
+            min-width: 40px;
           }
           .theme-toggle-btn:hover {
             background: ${theme === "dark" ? "#23272f" : "#e0e7ff"};
@@ -155,6 +157,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             }
             .hamburger {
               display: block !important;
+            }
+          }
+          @media (max-width: 600px) {
+            .theme-toggle-btn {
+              max-width: 44px;
+              min-width: 36px;
+              padding: 0.25em 0.5em;
+              font-size: 1.25em;
             }
           }
         `}</style>
