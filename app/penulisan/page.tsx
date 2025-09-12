@@ -96,11 +96,13 @@ function PenulisanPage() {
           drive?: string;
         };
         if (Array.isArray(data.penulisanList)) setPenulisanList(data.penulisanList);
-        if (Array.isArray(data.tugasList)) setTugasList(data.tugasList); // fix error
+        if (Array.isArray(data.tugasList)) setTugasList(data.tugasList);
         if (Array.isArray(data.berkasList)) setBerkasList(data.berkasList);
         if (typeof data.onedrive === "string") setOnedrive(data.onedrive);
         if (typeof data.drive === "string") setDrive(data.drive);
       }
+      // Jangan set data default jika snap.exists() === false
+      // Biarkan user menambah data baru lewat UI
     }
     fetchChecklist();
     if (typeof window !== "undefined") {
@@ -127,8 +129,48 @@ function PenulisanPage() {
     ? '0 2px 8px 0 rgba(0,0,0,0.32)'
     : '0 2px 8px 0 rgba(0,0,0,0.12)';
 
+  // Helper untuk progress dinamis
+  function calcPenulisanProgress(list: ChecklistItem[]) {
+    const totalBab = list.length;
+    if (totalBab === 0) return { percent: 0, detail: [] };
+    const babBobot = 100 / totalBab;
+    let done = 0;
+    let detail: { name: string, bobot: number, checked: boolean }[] = [];
+    list.forEach(bab => {
+      if (bab.subBab && bab.subBab.length > 0) {
+        const subBabBobot = babBobot / bab.subBab.length;
+        let subDone = 0;
+        bab.subBab.forEach(sub => {
+          detail.push({ name: `${bab.text} - ${sub.text}`, bobot: subBabBobot, checked: sub.checked });
+          if (sub.checked) subDone += subBabBobot;
+        });
+        // Bab checked jika semua subBab checked
+        if (bab.subBab.every(sub => sub.checked)) {
+          done += babBobot;
+        } else {
+          done += subDone;
+        }
+      } else {
+        detail.push({ name: bab.text, bobot: babBobot, checked: bab.checked });
+        if (bab.checked) done += babBobot;
+      }
+    });
+    return { percent: Math.round(done), detail };
+  }
+
+  // Bab dengan sub-bab: checked otomatis, tidak bisa dicentang manual
+  function getBabChecked(bab: ChecklistItem): boolean {
+    if (bab.subBab && bab.subBab.length > 0) {
+      return bab.subBab.every(sub => sub.checked);
+    }
+    return bab.checked;
+  }
+
   // Checklist Penulisan Actions
   async function handlePenulisanCheck(idx: number) {
+    const bab = penulisanList[idx];
+    // Jika bab punya subBab, tidak bisa dicentang manual
+    if (bab.subBab && bab.subBab.length > 0) return;
     const updated = [...penulisanList];
     updated[idx].checked = !updated[idx].checked;
     setPenulisanList(updated);
@@ -247,7 +289,16 @@ function PenulisanPage() {
         item.id === id ? { ...item, fileUrl: url, fileName: file.name } : item
       );
       setBerkasList(updated);
-      if (docRef) await setDoc(docRef, { penulisanList, tugasList, berkasList: updated, onedrive, drive }, { merge: true });
+      // Pastikan update Firestore dengan data updated, bukan state lama
+      if (docRef) {
+        await setDoc(docRef, {
+          penulisanList,
+          tugasList,
+          berkasList: updated,
+          onedrive,
+          drive
+        }, { merge: true });
+      }
     } catch (err: any) {
       setUploadError("Gagal upload berkas.");
     }
@@ -340,6 +391,8 @@ function PenulisanPage() {
     const updated = [...penulisanList];
     if (!updated[babIdx].subBab) return;
     updated[babIdx].subBab![subIdx].checked = !updated[babIdx].subBab![subIdx].checked;
+    // Bab checked jika semua subBab checked
+    updated[babIdx].checked = updated[babIdx].subBab!.every(sub => sub.checked);
     setPenulisanList(updated);
     if (docRef) await setDoc(docRef, { penulisanList: updated, tugasList, berkasList, onedrive, drive }, { merge: true });
   }
@@ -430,6 +483,8 @@ function PenulisanPage() {
     setNewValue: (txt: string) => void;
     onAdd: () => void;
   }) {
+    const isPenulisan = placeholder.includes("penulisan");
+    const isBerkas = placeholder.includes("berkas");
     return (
       <>
         <ul style={{
@@ -458,32 +513,31 @@ function PenulisanPage() {
               <div style={{ display: "flex", gap: "0.7em", width: "100%", marginBottom: "0.5em" }}>
                 <input
                   type="checkbox"
-                  checked={item.checked}
+                  checked={getBabChecked(item)}
                   onChange={() => onCheck(i)}
-                  style={{ accentColor: "#6366f1", width: "1em", height: "1em" }}
+                  disabled={isPenulisan && item.subBab && item.subBab.length > 0}
+                  style={{ accentColor: "#6366f1", width: "1em", height: "1em", cursor: (isPenulisan && item.subBab && item.subBab.length > 0) ? "not-allowed" : "pointer" }}
                 />
                 <button onClick={() => {
-                  setShowEditBabModal(true);
-                  setEditBabIdx(i);
-                  setEditBabName(item.text);
-                  setEditSubBabList(item.subBab ? [...item.subBab] : []);
-                  setEditSubBabIdx(null);
-                  setEditSubBabName("");
+                  onEdit(item);
                 }} style={{ ...btn, padding: "0.4em 0.7em", fontSize: "0.95em" }}>Edit</button>
                 <button onClick={() => onDelete(item.id)} style={{ ...btnRed, padding: "0.4em 0.7em", fontSize: "0.95em" }}>Hapus</button>
-                <button type="button" onClick={() => {
-                  setAddSubBabIdx(i);
-                  setAddSubBabValue("");
-                  setShowAddSubBabModal(true);
-                  if (!item.subBab) {
-                    const updated = [...penulisanList];
-                    updated[i].subBab = [];
-                    setPenulisanList(updated);
-                  }
-                }} style={{ ...btn, padding: "0.4em 0.7em", fontSize: "0.95em" }}>+</button>
+                {/* Tombol tambah sub-bab hanya untuk penulisan */}
+                {isPenulisan && (
+                  <button type="button" onClick={() => {
+                    setAddSubBabIdx(i);
+                    setAddSubBabValue("");
+                    setShowAddSubBabModal(true);
+                    if (!item.subBab) {
+                      const updated = [...penulisanList];
+                      updated[i].subBab = [];
+                      setPenulisanList(updated);
+                    }
+                  }} style={{ ...btn, padding: "0.4em 0.7em", fontSize: "0.95em" }}>+</button>
+                )}
               </div>
-              {/* SubBab section */}
-              {item.subBab && item.subBab.length > 0 && (
+              {/* SubBab section hanya untuk penulisan */}
+              {isPenulisan && item.subBab && item.subBab.length > 0 && (
                 <div style={{ marginLeft: "1.5em", marginTop: "0.7em", display: "flex", flexDirection: "column", gap: "0.6em" }}>
                   {item.subBab.map((sub, si) => (
                     <div key={sub.id} style={{
@@ -503,19 +557,57 @@ function PenulisanPage() {
                         type="checkbox"
                         checked={sub.checked}
                         onChange={() => handleSubBabCheck(i, si)}
-                        style={{ accentColor: colorAccent, width: "1.1em", height: "1.1em" }}
+                        style={{ accentColor: colorAccent, width: "1.1em", height: "1.1em", cursor: "pointer" }}
                       />
                       <span style={{ fontSize: "1em", fontWeight: 500, color: theme === "dark" ? colorAccentLight : colorAccent }}>{sub.text}</span>
                     </div>
                   ))}
                 </div>
               )}
+              {/* Input file hanya untuk checklist berkas */}
+              {isBerkas && (
+                <div style={{ marginTop: "0.7em" }}>
+                  {item.fileUrl ? (
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.7em" }}>
+                      <a href={item.fileUrl} target="_blank" rel="noopener noreferrer" style={{ color: colorAccent, fontWeight: 500 }}>
+                        {item.fileName || "Lihat File"}
+                      </a>
+                      <button
+                        onClick={() => handleBerkasRemoveFile(item.id)}
+                        style={{ ...btnRed, padding: "0.3em 0.7em", fontSize: "0.95em" }}
+                      >
+                        Hapus File
+                      </button>
+                    </div>
+                  ) : (
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.7em" }}>
+                      <input
+                        type="file"
+                        onChange={e => {
+                          if (e.target.files && e.target.files[0]) {
+                            handleBerkasUpload(item.id, e.target.files[0]);
+                          }
+                        }}
+                        disabled={uploadingId === item.id}
+                        style={{ fontSize: "0.98em" }}
+                      />
+                      {uploadingId === item.id && (
+                        <span style={{ color: colorAccent, fontWeight: 500 }}>Uploading...</span>
+                      )}
+                      {uploadError && uploadingId === item.id && (
+                        <span style={{ color: colorDanger, fontWeight: 500 }}>{uploadError}</span>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
             </li>
           ))}
         </ul>
         <div style={{ display: "flex", gap: "0.5em", marginTop: "0.3em" }}>
+          {/* Tombol tambah checklist: buka modal input sesuai tipe */}
           <button
-            onClick={() => openAddModal(placeholder.includes("penulisan") ? "penulisan" : placeholder.includes("tugas") ? "tugas" : "berkas")}
+            onClick={() => openAddModal(isPenulisan ? "penulisan" : placeholder.includes("tugas") ? "tugas" : "berkas")}
             style={{ ...btn, padding: "0.5em 1em", fontWeight: 500, fontSize: "0.95em", width: "100%" }}
           >
             + Tambah
@@ -535,6 +627,11 @@ function PenulisanPage() {
           color: theme === "dark" ? "#f3f4f6" : "#111827",
           textAlign: "center"
         }}>Checklist Penulisan</h1>
+
+        {/* Hapus Progress Checklist Penulisan Dinamis */}
+        {/* <div style={{ marginBottom: "2em" }}>
+          ...progress bar dan list progress...
+        </div> */}
 
         {/* Checklist Penulisan */}
         <div style={{ marginBottom: "3em" }}>
@@ -757,6 +854,45 @@ function PenulisanPage() {
                   setAddSubBabValue("");
                   setAddSubBabIdx(null);
                 }} style={{ ...btnGray, flex: 1 }}>Batal</button>
+              </div>
+            </div>
+          </div>
+        )}
+        {/* Modal input checklist */}
+        {showAddModal && (
+          <div style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            width: "100vw",
+            height: "100vh",
+            background: "rgba(0,0,0,0.35)",
+            zIndex: 9999,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center"
+          }}>
+            <div style={{
+              background: theme === "dark" ? "#23272f" : "#fff",
+              borderRadius: "16px",
+              padding: "2em 1.5em",
+              minWidth: 280,
+              boxShadow: "0 8px 32px rgba(99,102,241,0.18)",
+              color: theme === "dark" ? "#f3f4f6" : "#222"
+            }}>
+              <h3 style={{ marginBottom: "1em", fontWeight: 700, fontSize: "1.1em" }}>
+                {modalType === "penulisan" ? "Tambah Penulisan" : modalType === "tugas" ? "Tambah Tugas" : "Tambah Berkas"}
+              </h3>
+              <input
+                type="text"
+                value={modalValue}
+                onChange={e => setModalValue(e.target.value)}
+                placeholder={modalType === "penulisan" ? "Nama bab..." : modalType === "tugas" ? "Nama tugas..." : "Nama berkas..."}
+                style={{ width: "100%", padding: "0.7em", borderRadius: "8px", border: "1.5px solid #6366f1", fontSize: "1em", marginBottom: "1em" }}
+              />
+              <div style={{ display: "flex", gap: "0.7em" }}>
+                <button onClick={handleModalSave} style={{ ...btn, flex: 1 }}>Simpan</button>
+                <button onClick={() => setShowAddModal(false)} style={{ ...btnGray, flex: 1 }}>Batal</button>
               </div>
             </div>
           </div>

@@ -1,10 +1,39 @@
 "use client";
 import React, { useState, useEffect } from "react";
 
+const accentBlue = "#6366f1";
+const accentOrange = "#f59e42";
+
+// Helper untuk judul biru dan subjudul oranye
+function Title({ children }: { children: React.ReactNode }) {
+	return (
+		<span style={{
+			color: accentBlue,
+			fontWeight: 800,
+			fontSize: "1.13em",
+			letterSpacing: "0.01em"
+		}}>
+			{children}
+		</span>
+	);
+}
+function SubTitle({ children }: { children: React.ReactNode }) {
+	return (
+		<span style={{
+			color: accentOrange,
+			fontWeight: 700,
+			fontSize: "1em",
+			letterSpacing: "0.01em"
+		}}>
+			{children}
+		</span>
+	);
+}
+
 const menuList = [
 	{
 		key: "umum",
-		title: "Ketentuan Umum TA",
+		title: <Title>1. Ketentuan Umum TA</Title>,
 		content: (
 			<>
 				<ul className="panduan-list">
@@ -34,11 +63,11 @@ const menuList = [
 	},
 	{
 		key: "proposal",
-		title: "Struktur Proposal TA",
+		title: <Title>2. Struktur Proposal TA</Title>,
 		content: (
 			<>
-				<div style={{ marginBottom: 8, fontWeight: 500 }}>Proposal terdiri atas:</div>
-				<div style={{ marginBottom: 6, fontWeight: 600 }}>Bagian Awal</div>
+				<div style={{ marginBottom: 8, fontWeight: 500 }}><SubTitle>Proposal terdiri atas:</SubTitle></div>
+				<div style={{ marginBottom: 6, fontWeight: 600 }}><SubTitle>Bagian Awal</SubTitle></div>
 				<ul className="panduan-list">
 					<li>Cover</li>
 					<li>Lembar Persetujuan</li>
@@ -49,7 +78,7 @@ const menuList = [
 					<li>Daftar Tabel</li>
 					<li>Daftar Notasi (jika ada)</li>
 				</ul>
-				<div style={{ margin: "14px 0 6px 0", fontWeight: 600 }}>Bagian Isi</div>
+				<div style={{ margin: "14px 0 6px 0", fontWeight: 600 }}><SubTitle>Bagian Isi</SubTitle></div>
 				<ul className="panduan-list">
 					<li>
 						<b>BAB I Pendahuluan</b>
@@ -73,7 +102,7 @@ const menuList = [
 						</ul>
 					</li>
 				</ul>
-				<div style={{ margin: "14px 0 6px 0", fontWeight: 600 }}>Bagian Akhir</div>
+				<div style={{ margin: "14px 0 6px 0", fontWeight: 600 }}><SubTitle>Bagian Akhir</SubTitle></div>
 				<ul className="panduan-list">
 					<li>Daftar Pustaka (≥70% dari jurnal terbaru ≤10 tahun)</li>
 					<li>Lampiran</li>
@@ -83,10 +112,10 @@ const menuList = [
 	},
 	{
 		key: "laporan",
-		title: "Struktur Laporan TA",
+		title: <Title>3. Struktur Laporan TA</Title>,
 		content: (
 			<>
-				<div style={{ marginBottom: 6, fontWeight: 600 }}>Bagian Awal</div>
+				<div style={{ marginBottom: 6, fontWeight: 600 }}><SubTitle>Bagian Awal</SubTitle></div>
 				<ul className="panduan-list">
 					<li>Cover (softcover luar & dalam)</li>
 					<li>Pernyataan Keaslian</li>
@@ -99,7 +128,7 @@ const menuList = [
 					<li>Daftar Tabel</li>
 					<li>Daftar Notasi (jika ada)</li>
 				</ul>
-				<div style={{ margin: "14px 0 6px 0", fontWeight: 600 }}>Bagian Isi</div>
+				<div style={{ margin: "14px 0 6px 0", fontWeight: 600 }}><SubTitle>Bagian Isi</SubTitle></div>
 				<ul className="panduan-list">
 					<li>BAB I Pendahuluan</li>
 					<li>BAB II Tinjauan Pustaka</li>
@@ -107,7 +136,7 @@ const menuList = [
 					<li>BAB IV Hasil dan Pembahasan</li>
 					<li>BAB V Penutup (Kesimpulan & Saran)</li>
 				</ul>
-				<div style={{ margin: "14px 0 6px 0", fontWeight: 600 }}>Bagian Akhir</div>
+				<div style={{ margin: "14px 0 6px 0", fontWeight: 600 }}><SubTitle>Bagian Akhir</SubTitle></div>
 				<ul className="panduan-list">
 					<li>Daftar Pustaka (HARVARD style, menggunakan Mendeley/Zotero/Endnote)</li>
 					<li>Lampiran</li>
@@ -117,7 +146,7 @@ const menuList = [
 	},
 	{
 		key: "artikel",
-		title: "Artikel Ilmiah (Publikasi dari TA)",
+		title: <Title>4. Artikel Ilmiah (Publikasi dari TA)</Title>,
 		content: (
 			<>
 				<ul className="panduan-list">
@@ -125,7 +154,7 @@ const menuList = [
 					<li>Panjang: 6–8 halaman.</li>
 					<li>Disetujui oleh pembimbing sebelum dipublikasikan.</li>
 					<li>
-						Struktur Artikel:
+						<SubTitle>Struktur Artikel:</SubTitle>
 						<ol style={{ marginTop: 8, marginBottom: 0, paddingLeft: 22 }}>
 							<li>Judul (10–15 kata)</li>
 							<li>Identitas Penulis</li>
@@ -145,12 +174,12 @@ const menuList = [
 	},
 	{
 		key: "penulisan",
-		title: "Tata Cara Penulisan Proposal & Laporan TA",
+		title: <Title>5. Tata Cara Penulisan Proposal & Laporan TA</Title>,
 		content: (
 			<>
 				<ul className="panduan-list">
 					<li>
-						<span style={{ fontWeight: 600, color: "#6366f1" }}>🔹 1. Aturan Penulisan</span>
+						<span style={{ fontWeight: 600, color: accentBlue }}>🔹 1. Aturan Penulisan</span>
 						<ul>
 							<li>
 								<b>Software & media:</b>
@@ -201,7 +230,7 @@ const menuList = [
 						</ul>
 					</li>
 					<li>
-						<span style={{ fontWeight: 600, color: "#6366f1" }}>🔹 2. Bahasa</span>
+						<span style={{ fontWeight: 600, color: accentBlue }}>🔹 2. Bahasa</span>
 						<ul>
 							<li>Menggunakan Bahasa Indonesia baku, sesuai EYD/PUEBI.</li>
 							<li>
@@ -223,7 +252,7 @@ const menuList = [
 						</ul>
 					</li>
 					<li>
-						<span style={{ fontWeight: 600, color: "#6366f1" }}>🔹 3. Penulisan Abstrak</span>
+						<span style={{ fontWeight: 600, color: accentBlue }}>🔹 3. Penulisan Abstrak</span>
 						<ul>
 							<li>
 								<b>Proposal TA (Bahasa Indonesia):</b>
@@ -242,7 +271,7 @@ const menuList = [
 						</ul>
 					</li>
 					<li>
-						<span style={{ fontWeight: 600, color: "#6366f1" }}>🔹 4. Penulisan Bab, Sub-Bab, Sub-Sub Bab</span>
+						<span style={{ fontWeight: 600, color: accentBlue }}>🔹 4. Penulisan Bab, Sub-Bab, Sub-Sub Bab</span>
 						<ul>
 							<li>Setiap Bab dimulai di halaman baru.</li>
 							<li>
@@ -263,8 +292,9 @@ const menuList = [
 							<li>
 								<span style={{ fontWeight: 600, color: "#f59e42" }}>📌 Contoh format struktur:</span>
 								<div
+									className="panduan-contoh-bg"
 									style={{
-										background: "#23272f",
+										background: undefined, // background akan diatur via CSS
 										color: "#f3f4f6",
 										fontFamily: "monospace",
 										padding: "1em",
@@ -285,7 +315,7 @@ const menuList = [
 						</ul>
 					</li>
 					<li>
-						<span style={{ fontWeight: 600, color: "#6366f1" }}>🔹 5. Penomoran Halaman</span>
+						<span style={{ fontWeight: 600, color: accentBlue }}>🔹 5. Penomoran Halaman</span>
 						<ul>
 							<li>Bagian Awal (dari Pernyataan Keaslian TA hingga Daftar Notasi) → angka Romawi kecil (i, ii, iii …).</li>
 							<li>Bagian Isi (Bab I – Bab V) → angka Arab (1, 2, 3 …).</li>
@@ -313,7 +343,7 @@ const menuList = [
 						</ul>
 					</li>
 					<li>
-						<span style={{ fontWeight: 600, color: "#6366f1" }}>🔹 6. Penulisan Tabel & Gambar</span>
+						<span style={{ fontWeight: 600, color: accentBlue }}>🔹 6. Penulisan Tabel & Gambar</span>
 						<ul>
 							<li>Wajib diberi nomor & judul.</li>
 							<li>
@@ -346,8 +376,9 @@ const menuList = [
 									<li>
 										<span style={{ fontWeight: 500 }}>Tabel:</span>
 										<div
+											className="panduan-contoh-bg"
 											style={{
-												background: "#23272f",
+												background: undefined,
 												color: "#f3f4f6",
 												fontFamily: "monospace",
 												padding: "1em",
@@ -364,8 +395,9 @@ const menuList = [
 									<li>
 										<span style={{ fontWeight: 500 }}>Gambar:</span>
 										<div
+											className="panduan-contoh-bg"
 											style={{
-												background: "#23272f",
+												background: undefined,
 												color: "#f3f4f6",
 												fontFamily: "monospace",
 												padding: "1em",
@@ -384,7 +416,7 @@ const menuList = [
 						</ul>
 					</li>
 					<li>
-						<span style={{ fontWeight: 600, color: "#6366f1" }}>🔹 7. Penulisan Persamaan</span>
+						<span style={{ fontWeight: 600, color: accentBlue }}>🔹 7. Penulisan Persamaan</span>
 						<ul>
 							<li>
 								Diberi nomor persamaan sesuai bab, ditulis rata kanan.
@@ -392,8 +424,9 @@ const menuList = [
 									<li>
 										<span style={{ fontWeight: 500 }}>Contoh:</span>
 										<div
+											className="panduan-contoh-bg"
 											style={{
-												background: "#23272f",
+												background: undefined,
 												color: "#f3f4f6",
 												fontFamily: "monospace",
 												padding: "1em",
@@ -413,7 +446,7 @@ const menuList = [
 						</ul>
 					</li>
 					<li>
-						<span style={{ fontWeight: 600, color: "#6366f1" }}>🔹 8. Penulisan Daftar Pustaka</span>
+						<span style={{ fontWeight: 600, color: accentBlue }}>🔹 8. Penulisan Daftar Pustaka</span>
 						<ul>
 							<li>Wajib pakai reference manager: Mendeley, Zotero, Endnote.</li>
 							<li>Format: HARVARD style.</li>
@@ -432,8 +465,9 @@ const menuList = [
 									<li>
 										<span style={{ fontWeight: 500 }}>Jurnal:</span>
 										<div
+											className="panduan-contoh-bg"
 											style={{
-												background: "#23272f",
+												background: undefined,
 												color: "#f3f4f6",
 												fontFamily: "monospace",
 												padding: "1em",
@@ -449,8 +483,9 @@ const menuList = [
 									<li>
 										<span style={{ fontWeight: 500 }}>Buku:</span>
 										<div
+											className="panduan-contoh-bg"
 											style={{
-												background: "#23272f",
+												background: undefined,
 												color: "#f3f4f6",
 												fontFamily: "monospace",
 												padding: "1em",
@@ -466,8 +501,9 @@ const menuList = [
 									<li>
 										<span style={{ fontWeight: 500 }}>Prosiding:</span>
 										<div
+											className="panduan-contoh-bg"
 											style={{
-												background: "#23272f",
+												background: undefined,
 												color: "#f3f4f6",
 												fontFamily: "monospace",
 												padding: "1em",
@@ -483,8 +519,9 @@ const menuList = [
 									<li>
 										<span style={{ fontWeight: 500 }}>Internet:</span>
 										<div
+											className="panduan-contoh-bg"
 											style={{
-												background: "#23272f",
+												background: undefined,
 												color: "#f3f4f6",
 												fontFamily: "monospace",
 												padding: "1em",
@@ -507,10 +544,157 @@ const menuList = [
 	},
 	{
 		key: "administrasi",
-		title: "Proses Administrasi TA",
+		title: <Title>6. Proses Administrasi TA</Title>,
 		content: (
 			<>
-				<p>Silakan isi detail proses administrasi TA di sini.</p>
+				<ul className="panduan-list">
+					<li>
+						<span style={{ fontWeight: 600, color: accentBlue }}>🔹 A. Seminar Proposal TA</span>
+						<ul>
+							<li>
+								<b>1. Syarat & Persiapan</b>
+								<ul>
+									<li>Minimal sudah menempuh 120 SKS lulus.</li>
+									<li>Sudah punya pembimbing (Form. TA-001A/B).</li>
+									<li>Proposal TA (Bab I – Bab III) sudah selesai.</li>
+								</ul>
+							</li>
+							<li>
+								<b>2. Berkas yang Diserahkan</b>
+								<ul>
+									<li>Form. TA-001A / TA-001B → Usulan Pembimbing & Bidang Minat.</li>
+									<li>Form. TA-002 → Permohonan Seminar Proposal.</li>
+									<li>Draft Proposal TA (versi cetak/softcopy).</li>
+									<li>Setelah diverifikasi → Admin keluarkan Form. TA-003 (Bukti Pendaftaran Seminar Proposal).</li>
+								</ul>
+								<div style={{ marginTop: 6, color: accentOrange, fontWeight: 500 }}>
+									📌 Catatan: Minimal 3 hari sebelum seminar, mahasiswa wajib menyerahkan draft proposal + undangan ke pembimbing & penguji.
+								</div>
+							</li>
+							<li>
+								<b>3. Pelaksanaan Seminar</b>
+								<ul>
+									<li>Jadwal: ditentukan Koordinator Prodi/Administrasi Jurusan.</li>
+									<li>
+										Peserta:
+										<ul>
+											<li>Pembimbing wajib hadir.</li>
+											<li>Minimal 2 dosen penguji.</li>
+											<li>Mahasiswa prodi (audience, sifatnya wajib hadir).</li>
+										</ul>
+									</li>
+									<li>Format presentasi: 10–15 menit presentasi, tanya jawab ±30 menit.</li>
+									<li>
+										Isi presentasi:
+										<ul>
+											<li>Latar Belakang & Rumusan Masalah</li>
+											<li>Tujuan & Manfaat Penelitian</li>
+											<li>Tinjauan Pustaka singkat</li>
+											<li>Metodologi Penelitian (flowchart, alat & data, analisis rencana)</li>
+											<li>Rencana Jadwal Penelitian</li>
+										</ul>
+									</li>
+								</ul>
+							</li>
+							<li>
+								<b>4. Penilaian & Dokumen Hasil</b>
+								<ul>
+									<li>Penguji mengisi Form. TA-004A/B (Form Penilaian Seminar Proposal).</li>
+									<li>Kehadiran dicatat di Form. TA-012 (Lembar Kehadiran Seminar Proposal).</li>
+									<li>
+										Hasil Seminar Proposal:
+										<ul>
+											<li>✅ Disetujui → bisa lanjut penelitian.</li>
+											<li>⚠️ Disetujui dengan revisi → perbaikan proposal & disetujui pembimbing.</li>
+											<li>❌ Tidak disetujui → seminar ulang.</li>
+										</ul>
+									</li>
+								</ul>
+							</li>
+						</ul>
+					</li>
+					<li>
+						<span style={{ fontWeight: 600, color: accentBlue }}>🔹 B. Sidang & Hasil Tugas Akhir</span>
+						<ul>
+							<li>
+								<b>1. Syarat Pendaftaran Sidang</b>
+								<ul>
+									<li>
+										Mahasiswa wajib menyerahkan berkas ke Admin Jurusan melalui Koordinator Prodi:
+										<ul>
+											<li>Form. TA-006 → Lembar Konsultasi/Bimbingan (≥10 kali bimbingan).</li>
+											<li>Form. TA-007 → Persetujuan Pembimbing untuk Sidang TA.</li>
+											<li>Form. TA-008 → Permohonan Sidang TA.</li>
+											<li>Form. TA-012 → Lembar Kehadiran Seminar Proposal.</li>
+											<li>Draft Laporan TA (dicetak & diserahkan ke penguji).</li>
+										</ul>
+									</li>
+									<li>➡ Setelah berkas lengkap → Admin keluarkan Form. TA-009 (Bukti Pendaftaran Sidang TA).</li>
+								</ul>
+							</li>
+							<li>
+								<b>2. Pelaksanaan Sidang</b>
+								<ul>
+									<li>Durasi: ± 1 jam (presentasi 15–20 menit + tanya jawab).</li>
+									<li>Tim Penguji: ditentukan jurusan, minimal 2 dosen selain pembimbing.</li>
+									<li>
+										Aturan:
+										<ul>
+											<li>Wajib menyerahkan draft laporan + undangan ke penguji minimal 3 hari sebelum sidang.</li>
+											<li>Pakaian: formal (kemeja, celana kain/rok, dasi untuk laki-laki, sepatu).</li>
+										</ul>
+									</li>
+								</ul>
+							</li>
+							<li>
+								<b>3. Hasil Sidang</b>
+								<ul>
+									<li>
+										Hasil sidang dituangkan dalam berita acara:
+										<ul>
+											<li>✅ Lulus tanpa revisi → langsung ke tahap unggah berkas.</li>
+											<li>⚠️ Lulus dengan revisi → revisi wajib selesai maksimal 2 minggu setelah sidang; pembimbing/penguji menandatangani lembar revisi.</li>
+											<li>❌ Tidak lulus → sidang ulang maksimal 2 minggu setelah sidang pertama.</li>
+										</ul>
+									</li>
+								</ul>
+							</li>
+							<li>
+								<b>4. Setelah Lulus Sidang</b>
+								<ul>
+									<li>
+										Cek Plagiarisme (Turnitin):
+										<ul>
+											<li>Laporan TA ≤ 30%</li>
+											<li>Artikel ilmiah ≤ 20%</li>
+											<li>Jika melebihi → wajib revisi.</li>
+										</ul>
+									</li>
+									<li>
+										Unggah Berkas TA (digital, PDF/ZIP, max 10MB):
+										<ul>
+											<li>Laporan TA final (lembar pengesahan ditandatangani & discan).</li>
+											<li>Artikel ilmiah (paper 6–8 halaman).</li>
+											<li>Form. TA-020 → Persetujuan Publikasi Ilmiah.</li>
+											<li>Form. TA-021 → Surat Pernyataan Bebas Plagiarisme.</li>
+											<li>Form. TA-022 → Bukti Terima Berkas TA.</li>
+											<li>Form. TA-023 → Rekap Hasil Cek Plagiarisme.</li>
+											<li>Form. TA-024 / TA-025 → Bebas Lab / Bebas Perpustakaan.</li>
+											<li>Form. TA-026 → Hasil Lolos Berhak Unggah TA.</li>
+										</ul>
+									</li>
+									<li>
+										Validasi & Pengarsipan:
+										<ul>
+											<li>Admin memverifikasi berkas.</li>
+											<li>Mahasiswa memperoleh bukti sah unggah TA.</li>
+										</ul>
+									</li>
+								</ul>
+							</li>
+						</ul>
+					</li>
+				</ul>
 			</>
 		),
 	},
@@ -544,9 +728,6 @@ export default function PanduanPage() {
 
 	return (
 		<>
-			<head>
-				<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;900&family=Poppins:wght@700;900&display=swap" rel="stylesheet" />
-			</head>
 			<main
 				style={{
 					maxWidth: 700,
@@ -585,29 +766,6 @@ export default function PanduanPage() {
 						Panduan Tugas Akhir ITK
 					</h2>
 				</header>
-				<div style={{ display: "flex", justifyContent: "center", marginBottom: 24 }}>
-					<button
-						style={{
-							borderRadius: 10,
-							padding: "1em 2em",
-							background: colorAccent,
-							color: "#fff",
-							border: "none",
-							fontWeight: 700,
-							fontSize: "1.13em",
-							boxShadow: "0 2px 8px #6366f120",
-							cursor: "pointer",
-							transition: "background 0.2s, transform 0.15s",
-							fontFamily: "'Montserrat', 'Poppins', 'Segoe UI', Arial, sans-serif",
-							outline: "none",
-						}}
-						onMouseDown={e => e.currentTarget.style.transform = "scale(0.97)"}
-						onMouseUp={e => e.currentTarget.style.transform = "scale(1)"}
-						onMouseLeave={e => e.currentTarget.style.transform = "scale(1)"}
-					>
-						📤 Upload File
-					</button>
-				</div>
 				<section>
 					{menuList.map((item, idx) => (
 						<div
@@ -617,12 +775,12 @@ export default function PanduanPage() {
 								marginBottom: 18,
 								borderRadius: 14,
 								border: `1.5px solid ${colorBorder}`,
-								background: theme === "dark" ? "#18181b" : "#f8fafc",
+								background: "#18181b",
 								boxShadow: colorShadow,
 								overflow: "hidden",
 								transition: "box-shadow 0.2s, background 0.2s",
 								fontFamily: "'Montserrat', 'Poppins', 'Segoe UI', Arial, sans-serif",
-								fontSize: "0.97em", // konsisten lebih kecil
+								fontSize: "0.97em",
 							}}
 						>
 							<button
@@ -647,9 +805,7 @@ export default function PanduanPage() {
 									background: openIdx === idx ? (theme === "dark" ? "#23272f" : "#e0e7ff") : "none",
 								}}
 							>
-								<span>
-									🔹 {idx + 1}. {item.title}
-								</span>
+								{item.title}
 								<span
 									style={{
 										marginLeft: "auto",
@@ -664,14 +820,15 @@ export default function PanduanPage() {
 							</button>
 							<div
 								style={{
-									maxHeight: openIdx === idx ? 2000 : 0,
+									maxHeight: openIdx === idx ? 400 : 0,
 									opacity: openIdx === idx ? 1 : 0,
-									overflow: "hidden",
+									overflow: openIdx === idx ? "auto" : "hidden",
+									overflowY: openIdx === idx ? "auto" : "unset",
 									transition: "max-height 0.35s cubic-bezier(.4,0,.2,1), opacity 0.25s",
-									background: colorCardBg,
+									background: "#18181b",
 									borderTop: openIdx === idx ? `1px solid ${colorBorder}` : "none",
 									color: colorText,
-									fontSize: "0.97em", // isi lebih kecil
+									fontSize: "0.97em",
 									lineHeight: "1.65",
 									letterSpacing: "0.01em",
 									fontFamily: "'Montserrat', 'Poppins', 'Segoe UI', Arial, sans-serif",
@@ -684,6 +841,23 @@ export default function PanduanPage() {
 						</div>
 					))}
 				</section>
+				{/* Tampilkan PDF statis dari app/panduan/panduan-ta.pdf */}
+				<div style={{ display: "flex", flexDirection: "column", alignItems: "center", margin: "48px 0 0 0" }}>
+					<div style={{ width: "100%", maxWidth: 600, marginTop: 18 }}>
+						<div style={{ marginBottom: 8, color: colorAccent, fontWeight: 700 }}>Preview Panduan TA (PDF):</div>
+						<iframe
+							src="/panduan/panduan-ta.pdf"
+							title="Panduan TA ITK"
+							width="100%"
+							height="500px"
+							style={{
+								border: "2px solid #6366f1",
+								borderRadius: 12,
+								background: "#18181b",
+							}}
+						/>
+					</div>
+				</div>
 				<style>{`
 					.panduan-list {
 						margin: 0 0 0 1.2em;
@@ -713,6 +887,25 @@ export default function PanduanPage() {
 						font-size: 1.08em !important;
 						letter-spacing: 0.02em;
 					}
+					.panduan-accordion.open > div {
+						scrollbar-width: thin;
+						scrollbar-color: #6366f1 #23272f;
+					}
+					.panduan-accordion.open > div::-webkit-scrollbar {
+						width: 8px;
+					}
+					.panduan-accordion.open > div::-webkit-scrollbar-thumb {
+						background: #6366f1;
+						border-radius: 8px;
+					}
+					.panduan-accordion.open > div::-webkit-scrollbar-track {
+						background: #23272f;
+						border-radius: 8px;
+					}
+					.panduan-accordion.open > div .panduan-contoh-bg {
+						background: #18181b !important;
+						color: #f3f4f6 !important;
+					}
 					@media (max-width: 600px) {
 						main {
 							padding: 10px !important;
@@ -724,6 +917,9 @@ export default function PanduanPage() {
 						}
 						.panduan-list {
 							font-size: 0.93em !important;
+						}
+						.panduan-accordion.open > div {
+							max-height: 260px !important;
 						}
 					}
 				`}</style>

@@ -271,9 +271,38 @@ export default function DashboardPage() {
     gap: "0.8em"
   };
 
+  // Helper progress dinamis (copy dari penulisan/page.tsx)
+  function calcPenulisanProgress(list: any[]) {
+    const totalBab = list.length;
+    if (totalBab === 0) return { percent: 0, detail: [] };
+    const babBobot = 100 / totalBab;
+    let done = 0;
+    let detail: { name: string, bobot: number, checked: boolean }[] = [];
+    list.forEach(bab => {
+      if (bab.subBab && bab.subBab.length > 0) {
+        const subBabBobot = babBobot / bab.subBab.length;
+        let subDone = 0;
+        bab.subBab.forEach(sub => {
+          detail.push({ name: `${bab.text} - ${sub.text}`, bobot: subBabBobot, checked: sub.checked });
+          if (sub.checked) subDone += subBabBobot;
+        });
+        // Bab checked jika semua subBab checked
+        if (bab.subBab.every(sub => sub.checked)) {
+          done += babBobot;
+        } else {
+          done += subDone;
+        }
+      } else {
+        detail.push({ name: bab.text, bobot: babBobot, checked: bab.checked });
+        if (bab.checked) done += babBobot;
+      }
+    });
+    return { percent: Math.round(done), detail };
+  }
+
   // ProgressBar helper
-  function ProgressBar({ total, done, title, color }: { total: number, done: number, title: string, color: string }) {
-    const percent = total ? Math.round((done / total) * 100) : 0;
+  function ProgressBar({ total, done, title, color, percentOverride }: { total: number, done: number, title: string, color: string, percentOverride?: number }) {
+    const percent = typeof percentOverride === "number" ? percentOverride : (total ? Math.round((done / total) * 100) : 0);
     return (
       <div style={{ marginBottom: "1.3em" }}>
         <div style={{
@@ -684,12 +713,19 @@ export default function DashboardPage() {
         {/* Progress Section */}
         <div style={{ ...sectionStyle }} data-section-style className="progress-section">
           <h2 style={{ fontSize: "1.18em", fontWeight: 800, marginBottom: "1em" }}>Progress Checklist</h2>
-          <ProgressBar
-            total={penulisanList.length}
-            done={penulisanList.filter(i => i && i.checked).length}
-            title="Penulisan"
-            color="linear-gradient(90deg,#6366f1,#60a5fa)"
-          />
+          {/* Penulisan progress dinamis */}
+          {(() => {
+            const { percent } = calcPenulisanProgress(penulisanList);
+            return (
+              <ProgressBar
+                total={penulisanList.length}
+                done={penulisanList.filter(i => i && i.checked).length}
+                title="Penulisan"
+                color="linear-gradient(90deg,#6366f1,#60a5fa)"
+                percentOverride={percent}
+              />
+            );
+          })()}
           <ProgressBar
             total={tugasList.length}
             done={tugasList.filter(i => i && i.checked).length}
