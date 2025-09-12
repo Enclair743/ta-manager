@@ -53,6 +53,7 @@ function PenulisanPage() {
   const [editPenulisanId, setEditPenulisanId] = useState<string | null>(null);
   const [editPenulisanText, setEditPenulisanText] = useState("");
 
+  // Tambahkan state untuk tugasList
   const [tugasList, setTugasList] = useState<ChecklistItem[]>([]);
   const [newTugas, setNewTugas] = useState("");
   const [editTugasId, setEditTugasId] = useState<string | null>(null);
@@ -95,7 +96,7 @@ function PenulisanPage() {
           drive?: string;
         };
         if (Array.isArray(data.penulisanList)) setPenulisanList(data.penulisanList);
-        if (Array.isArray(data.tugasList)) setTugasList(data.tugasList);
+        if (Array.isArray(data.tugasList)) setTugasList(data.tugasList); // fix error
         if (Array.isArray(data.berkasList)) setBerkasList(data.berkasList);
         if (typeof data.onedrive === "string") setOnedrive(data.onedrive);
         if (typeof data.drive === "string") setDrive(data.drive);
@@ -423,7 +424,7 @@ function PenulisanPage() {
     editText: string;
     setEditText: (txt: string) => void;
     onEditSave: () => void;
-    setEditId: typeof setEditPenulisanId | typeof setEditTugasId | typeof setEditBerkasId;
+    setEditId: typeof setEditPenulisanId | typeof setEditBerkasId;
     placeholder: string;
     newValue: string;
     setNewValue: (txt: string) => void;
