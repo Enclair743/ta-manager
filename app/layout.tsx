@@ -10,6 +10,7 @@ const navItems = [
   { href: "/catatan", label: "Catatan", icon: "📒" },
   { href: "/referensi", label: "Referensi", icon: "🔗" },
   { href: "/kalender", label: "Kalender", icon: "📅" },
+  { href: "/panduan", label: "Panduan", icon: "📘" }, // <-- Tambahkan ini
 ];
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
