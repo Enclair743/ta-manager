@@ -588,7 +588,8 @@ export default function DashboardPage() {
             { href: "/penulisan", label: "📝 Penulisan" },
             { href: "/catatan", label: "📒 Catatan" },
             { href: "/referensi", label: "📚 Referensi" },
-            { href: "/kalender", label: "📅 Kalender" }
+            { href: "/kalender", label: "📅 Kalender" },
+            { href: "/panduan", label: "📘 Panduan" }, // <-- Tambahkan ini
           ].map(card => (
             <a
               key={card.href}
