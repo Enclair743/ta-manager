@@ -448,9 +448,9 @@ export default function DashboardPage() {
           background: theme === 'dark'
             ? 'linear-gradient(90deg,#a5b4fc,#7c3aed)'
             : 'linear-gradient(90deg,#7c3aed,#a5b4fc)',
-          backgroundClip: "text",
-          WebkitBackgroundClip: "text",
-          WebkitTextFillColor: "transparent",
+            backgroundClip: "text",
+            WebkitBackgroundClip: "text",
+            WebkitTextFillColor: "transparent",
           textAlign: "center",
           letterSpacing: "0.01em"
         }}>
@@ -466,9 +466,9 @@ export default function DashboardPage() {
           background: theme === 'dark'
             ? 'linear-gradient(90deg,#6366f1,#a5b4fc)'
             : 'linear-gradient(90deg,#7c3aed,#a5b4fc)',
-          backgroundClip: "text",
-          WebkitBackgroundClip: "text",
-          WebkitTextFillColor: "transparent",
+            backgroundClip: "text",
+            WebkitBackgroundClip: "text",
+            WebkitTextFillColor: "transparent",
           letterSpacing: "0.01em"
         }}>
           {user.email}
@@ -688,6 +688,12 @@ export default function DashboardPage() {
             done={penulisanList.filter(i => i && i.checked).length}
             title="Penulisan"
             color="linear-gradient(90deg,#6366f1,#60a5fa)"
+          />
+          <ProgressBar
+            total={tugasList.length}
+            done={tugasList.filter(i => i && i.checked).length}
+            title="Tugas"
+            color="linear-gradient(90deg,#f59e42,#6366f1)"
           />
           <ProgressBar
             total={berkasList.length}
