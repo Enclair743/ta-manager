@@ -5,6 +5,7 @@ import { getFirestore, collection, addDoc, getDocs, updateDoc, deleteDoc, doc, D
 import jsPDF from "jspdf";
 import { useAuth } from "../../src/context/AuthContext";
 import { useRouter } from "next/navigation";
+import { useAuthCalendar } from "../../src/context/AuthCalendarContext";
 
 type JenisReferensi = "Buku" | "Jurnal" | "Website" | "Laporan" | "Skripsi";
 type Referensi = {
@@ -13,6 +14,7 @@ type Referensi = {
   data: any;
   fileName?: string;
   fileUrl?: string;
+  fileId?: string; // Tambahkan properti fileId
 };
 
 const jenisList: { label: string; value: JenisReferensi }[] = [
@@ -208,6 +210,12 @@ export default function ReferensiPage() {
   const { user, loading } = useAuth();
   const router = useRouter();
   const db = getFirestore(app);
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+
+  const authCalendar = typeof window !== "undefined" ? useAuthCalendar() : null;
+  const calendarToken = authCalendar?.calendarToken;
 
   // Ganti doc menjadi per user
   function getReferensiDoc(uid: string) {
@@ -296,20 +304,105 @@ export default function ReferensiPage() {
         : String(bVal).localeCompare(String(aVal));
     });
 
+  // Konversi ArrayBuffer ke base64 (untuk upload Google Drive)
+  function arrayBufferToBase64(buffer: ArrayBuffer) {
+    let binary = '';
+    const bytes = new Uint8Array(buffer);
+    const len = bytes.byteLength;
+    for (let i = 0; i < len; i++) {
+      binary += String.fromCharCode(bytes[i]);
+    }
+    return btoa(binary);
+  }
+
+  // Upload file ke Google Drive, return {fileId, fileUrl, fileName}
+  async function uploadFileToDrive(file: File) {
+    if (!calendarToken) throw new Error("Akses Google Drive tidak tersedia. Silakan login ulang.");
+    // Step 1: Buat metadata file
+    const metadata = {
+      name: file.name,
+      mimeType: file.type || 'application/pdf',
+    };
+    // Step 2: Buat multipart body
+    const boundary = '-------314159265358979323846';
+    const delimiter = `\r\n--${boundary}\r\n`;
+    const close_delim = `\r\n--${boundary}--`;
+    const reader = await file.arrayBuffer();
+    const base64Data = arrayBufferToBase64(reader);
+    const multipartRequestBody =
+      delimiter +
+      'Content-Type: application/json; charset=UTF-8\r\n\r\n' +
+      JSON.stringify(metadata) +
+      delimiter +
+      `Content-Type: ${file.type || 'application/pdf'}\r\n` +
+      'Content-Transfer-Encoding: base64\r\n' +
+      '\r\n' +
+      base64Data +
+      close_delim;
+    // Step 3: Upload ke Google Drive
+    const res = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${calendarToken}`,
+        'Content-Type': `multipart/related; boundary=${boundary}`,
+      },
+      body: multipartRequestBody,
+    });
+    if (!res.ok) {
+      const errText = await res.text();
+      throw new Error("Gagal upload ke Google Drive: " + errText);
+    }
+    const data = await res.json();
+    const fileId = data.id;
+    // Step 4: Set permission publik
+    await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}/permissions`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${calendarToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ role: 'reader', type: 'anyone' }),
+    });
+    const url = `https://drive.google.com/file/d/${fileId}/view?usp=sharing`;
+    return { fileId, fileUrl: url, fileName: file.name };
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!user) return;
     let fileUrl: string | undefined = undefined;
     let fileName: string | undefined = undefined;
-    if (file) {
-      fileUrl = URL.createObjectURL(file);
-      fileName = file.name;
+    let fileId: string | undefined = undefined;
+    setUploadError(null);
+
+    // Upload file ke Google Drive jika ada file baru
+    if (pendingFile) {
+      setUploading(true);
+      try {
+        const uploaded = await uploadFileToDrive(pendingFile);
+        fileUrl = uploaded.fileUrl;
+        fileName = uploaded.fileName;
+        fileId = uploaded.fileId;
+      } catch (err: any) {
+        setUploadError(err?.message || "Gagal upload file");
+        setUploading(false);
+        return;
+      }
+      setUploading(false);
+    } else if (editIdx !== null && filtered[editIdx]?.fileUrl) {
+      // Jika edit dan tidak ganti file, pertahankan file lama
+      fileUrl = filtered[editIdx].fileUrl;
+      fileName = filtered[editIdx].fileName;
+      fileId = filtered[editIdx].fileId;
     }
+
     let newList;
     if (editIdx !== null && filtered[editIdx]?.id) {
-      newList = referensiList.map((r, i) => i === editIdx ? { ...r, jenis, data: form, fileUrl, fileName } : r);
+      newList = referensiList.map((r, i) =>
+        i === editIdx ? { ...r, jenis, data: form, fileUrl, fileName, fileId } : r
+      );
     } else {
-      newList = [...referensiList, { id: Date.now().toString(), jenis, data: form, fileUrl, fileName }];
+      newList = [...referensiList, { id: Date.now().toString(), jenis, data: form, fileUrl, fileName, fileId }];
     }
     const docRef = getReferensiDoc(user.uid);
     const snap = await getDoc(docRef);
@@ -323,17 +416,22 @@ export default function ReferensiPage() {
     setShowModal(false);
   }
 
-  function handleEdit(idx: number) {
-    setJenis(filtered[idx].jenis);
-    setForm(filtered[idx].data);
-    setFile(undefined);
-    setEditIdx(idx);
-    setShowModal(true);
-  }
-
+  // Hapus file dari Google Drive jika user hapus referensi
   async function handleDelete(idx: number) {
     if (!user) return;
     if (!confirm("Yakin ingin menghapus referensi ini?")) return;
+    const refToDelete = referensiList[idx];
+    // Jangan hapus file di Google Drive, cukup hapus data di Firestore
+    // if (refToDelete.fileId && calendarToken) {
+    //   try {
+    //     await fetch(`https://www.googleapis.com/drive/v3/files/${refToDelete.fileId}`, {
+    //       method: 'DELETE',
+    //       headers: {
+    //         'Authorization': `Bearer ${calendarToken}`,
+    //       },
+    //     });
+    //   } catch {}
+    // }
     const newList = referensiList.filter((r, i) => i !== idx);
     const docRef = getReferensiDoc(user.uid);
     const snap = await getDoc(docRef);
@@ -348,8 +446,18 @@ export default function ReferensiPage() {
   function resetForm() {
     setJenis("Buku");
     setForm({});
-    setFile(undefined);
+    setPendingFile(null);
     setEditIdx(null);
+    setUploading(false);
+    setUploadError(null);
+  }
+
+  function handleEdit(idx: number) {
+    setJenis(filtered[idx].jenis);
+    setForm(filtered[idx].data);
+    setPendingFile(null);
+    setEditIdx(idx);
+    setShowModal(true);
   }
 
   function handlePreviewFile(url: string) {
@@ -594,7 +702,7 @@ export default function ReferensiPage() {
           top: 0, left: 0, right: 0, bottom: 0,
           background: "rgba(0,0,0,0.3)",
           zIndex: 10,
-          overflowY: "auto" // agar modal bisa discroll
+          overflowY: "auto"
         }}
           onClick={() => setShowModal(false)}
         >
@@ -608,8 +716,8 @@ export default function ReferensiPage() {
               padding: "2rem",
               boxShadow: "0 8px 32px rgba(99,102,241,0.18)",
               color: theme === "dark" ? "#f3f4f6" : "#222",
-              overflowY: "auto", // agar isi modal bisa discroll
-              maxHeight: "90vh", // modal tidak keluar layar
+              overflowY: "auto",
+              maxHeight: "90vh",
             }}
             onClick={e => e.stopPropagation()}
           >
@@ -620,7 +728,7 @@ export default function ReferensiPage() {
                   <input
                     type="file"
                     accept="application/pdf"
-                    onChange={e => setFile(e.target.files?.[0])}
+                    onChange={e => setPendingFile(e.target.files?.[0] || null)}
                     style={{
                       marginLeft: "8px",
                       padding: "0.5em",
@@ -629,8 +737,25 @@ export default function ReferensiPage() {
                       background: theme === "dark" ? "#353a47" : "#fff",
                       color: theme === "dark" ? "#f3f4f6" : "#222"
                     }}
+                    disabled={uploading}
                   />
                 </label>
+                {/* Feedback upload/error hanya setelah klik Simpan */}
+                {uploading && (
+                  <span style={{ color: colorAccent, fontWeight: 500, marginLeft: 12 }}>Uploading file ke Google Drive...</span>
+                )}
+                {uploadError && (
+                  <span style={{ color: uploadError.includes('sukses') ? colorSuccess : colorDanger, fontWeight: 500, marginLeft: 12 }}>{uploadError}</span>
+                )}
+                {/* Jika sedang edit dan ada file lama */}
+                {editIdx !== null && filtered[editIdx]?.fileUrl && !pendingFile && (
+                  <div style={{ marginTop: 8 }}>
+                    <span style={{ color: colorAccent, fontWeight: 500 }}>File lama: </span>
+                    <a href={filtered[editIdx].fileUrl} target="_blank" rel="noopener noreferrer" style={{ color: colorAccent, textDecoration: "underline", fontWeight: 600 }}>
+                      {filtered[editIdx].fileName || "Lihat File"}
+                    </a>
+                  </div>
+                )}
               </div>
               <div style={{ marginBottom: "1em" }}>
                 <label>
@@ -668,6 +793,7 @@ export default function ReferensiPage() {
                   fontWeight: 500,
                   cursor: "pointer"
                 }}
+                disabled={uploading}
               >
                 {editIdx !== null ? "Update" : "Simpan"}
               </button>
@@ -684,6 +810,7 @@ export default function ReferensiPage() {
                   fontWeight: 500,
                   cursor: "pointer"
                 }}
+                disabled={uploading}
               >
                 Batal
               </button>

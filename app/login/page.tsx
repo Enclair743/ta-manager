@@ -46,13 +46,13 @@ export default function LoginPage() {
     const result = await signInWithPopup(auth, provider);
     setUser(result.user);
 
-    // Step 2: Login Google Calendar OAuth (GIS)
+    // Step 2: Login Google Calendar & Drive OAuth (GIS)
     if (window.google?.accounts?.oauth2) {
       console.log("[Login] GIS tersedia, mulai request access token...");
       try {
         const tokenClient = window.google.accounts.oauth2.initTokenClient({
           client_id: "656328403825-6ntm1l1mjnqn589rnqj77m1svf6sq3oq.apps.googleusercontent.com",
-          scope: "https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/userinfo.email",
+          scope: "https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/drive.file",
           callback: (resp) => {
             console.log("[Login] Callback GIS response:", resp);
             if (resp.access_token) {

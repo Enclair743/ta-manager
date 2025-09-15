@@ -1,7 +1,5 @@
 "use client";
 import { useState, useEffect } from "react";
-import { useEditor, EditorContent } from "@tiptap/react";
-import StarterKit from "@tiptap/starter-kit";
 import jsPDF from "jspdf";
 import app from "../firebase";
 import { getFirestore, collection, addDoc, getDocs, updateDoc, deleteDoc, doc, QueryDocumentSnapshot, DocumentData, getDoc, setDoc } from "firebase/firestore";
@@ -31,19 +29,6 @@ export default function CatatanTiptapPage() {
   const { user, loading } = useAuth();
   const router = useRouter();
   const db = getFirestore(app);
-
-  const editor = useEditor({
-    extensions: [StarterKit],
-    content: form.isi,
-    immediatelyRender: false,
-    onUpdate: ({ editor }) => {
-      setForm(f => ({ ...f, isi: editor.getHTML() }));
-    },
-  });
-
-  useEffect(() => {
-    if (editor) editor.commands.setContent(form.isi || "");
-  }, [showForm, editIdx]);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -148,7 +133,6 @@ export default function CatatanTiptapPage() {
       setShowForm(false);
       setEditIdx(null);
       setForm({ tanggal: "", nama: "", isi: "" });
-      if (editor) editor.commands.setContent("");
     }
   }
 
@@ -156,7 +140,6 @@ export default function CatatanTiptapPage() {
     setForm(filteredCatatan[idx]);
     setShowForm(true);
     setEditIdx(idx);
-    if (editor) editor.commands.setContent(filteredCatatan[idx].isi || "");
   }
 
   function handleDelete(idx: number) {
@@ -319,7 +302,7 @@ export default function CatatanTiptapPage() {
           WebkitBackgroundClip: "text",
           WebkitTextFillColor: "transparent",
           fontWeight: 800,
-        }}>Catatan Asistensi (TipTap)</h1>
+        }}>Catatan Asistensi</h1>
 
         {/* Filter & Sort */}
         <div style={{
@@ -418,7 +401,6 @@ export default function CatatanTiptapPage() {
               setShowForm(!showForm);
               setEditIdx(null);
               setForm({ tanggal: "", nama: "", isi: "" });
-              if (editor) editor.commands.setContent("");
             }}
             style={{
               background: `linear-gradient(100deg,${colorAccent},${colorAccentWarn},${colorSuccess})`,
@@ -581,19 +563,27 @@ export default function CatatanTiptapPage() {
               </div>
               <div style={{ marginBottom: "1.3em", fontWeight: 500 }}>
                 <label style={{ color: colorLabel, fontSize: "1.13em", marginBottom: 6 }}>Catatan:</label>
-                <EditorContent editor={editor} style={{
-                  background: colorInputBg,
-                  borderRadius: "18px",
-                  minHeight: "220px",
-                  marginTop: "10px",
-                  marginBottom: "1em",
-                  padding: "1.2em",
-                  fontSize: "1.11em",
-                  boxShadow: colorShadow,
-                  border: `1.7px solid ${colorInputBorder}`,
-                  outline: "none",
-                  transition: "border 0.2s",
-                }} />
+                <textarea
+                  value={form.isi}
+                  onChange={e => setForm({ ...form, isi: e.target.value })}
+                  required
+                  style={{
+                    width: "100%",
+                    minHeight: "120px",
+                    marginTop: "10px",
+                    marginBottom: "1em",
+                    padding: "1.2em",
+                    fontSize: "1.11em",
+                    borderRadius: "18px",
+                    boxShadow: colorShadow,
+                    border: `1.7px solid ${colorInputBorder}`,
+                    background: colorInputBg,
+                    color: colorText,
+                    outline: "none",
+                    transition: "border 0.2s",
+                    resize: "vertical"
+                  }}
+                />
               </div>
               <button
                 type="submit"
@@ -619,7 +609,6 @@ export default function CatatanTiptapPage() {
                     setShowForm(false);
                     setEditIdx(null);
                     setForm({ tanggal: "", nama: "", isi: "" });
-                    if (editor) editor.commands.setContent("");
                   }}
                   style={{
                     marginLeft: "10px",
@@ -717,7 +706,7 @@ export default function CatatanTiptapPage() {
                   </div>
                   <div style={{ opacity: 0.74, fontSize: "1em" }}>
                     {typeof c.isi === "string"
-                      ? c.isi.replace(/<[^>]+>/g, "").slice(0, 60) + (c.isi.replace(/<[^>]+>/g, "").length > 60 ? "..." : "")
+                      ? c.isi.slice(0, 60) + (c.isi.length > 60 ? "..." : "")
                       : ""}
                   </div>
                 </div>
@@ -783,10 +772,12 @@ export default function CatatanTiptapPage() {
                   boxShadow: theme === 'dark'
                     ? 'inset 0 2px 8px rgba(124,58,237,0.10)'
                     : 'inset 0 2px 8px rgba(124,58,237,0.07)',
-                  border: `1.7px solid ${colorAccentSoft}`
+                  border: `1.7px solid ${colorAccentSoft}`,
+                  whiteSpace: "pre-wrap"
                 }}
-                dangerouslySetInnerHTML={{ __html: filteredCatatan[selectedIdx].isi }}
-              />
+              >
+                {filteredCatatan[selectedIdx].isi}
+              </div>
               <div style={{
                 position: "sticky",
                 bottom: "0",

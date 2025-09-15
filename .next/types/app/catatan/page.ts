@@ -1,8 +1,8 @@
-// File: /workspaces/ta-manager/app/penulisan/page.tsx
-import * as entry from '../../../../app/penulisan/page.js'
+// File: /workspaces/ta-manager/app/catatan/page.tsx
+import * as entry from '../../../../app/catatan/page.js'
 import type { ResolvingMetadata, ResolvingViewport } from 'next/dist/lib/metadata/types/metadata-interface.js'
 
-type TEntry = typeof import('../../../../app/penulisan/page.js')
+type TEntry = typeof import('../../../../app/catatan/page.js')
 
 // Check that the entry is a valid entry
 checkFields<Diff<{

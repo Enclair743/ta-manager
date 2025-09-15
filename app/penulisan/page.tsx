@@ -5,6 +5,7 @@ import { getFirestore, doc, getDoc, setDoc } from "firebase/firestore";
 import { v4 as uuidv4 } from "uuid";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { useAuth } from "../../src/context/AuthContext";
+import { useAuthCalendar } from "../../src/context/AuthCalendarContext";
 import { useRouter } from "next/navigation";
 
 type ChecklistItem = {
@@ -13,6 +14,7 @@ type ChecklistItem = {
   checked: boolean;
   fileUrl?: string;
   fileName?: string;
+  fileId?: string; // Simpan fileId Google Drive
   subBab?: ChecklistItem[];
 };
 
@@ -66,6 +68,8 @@ function PenulisanPage() {
   const [editBerkasText, setEditBerkasText] = useState("");
   const [uploadingId, setUploadingId] = useState<string | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  // State untuk file yang dipilih sebelum upload
+  const [pendingFiles, setPendingFiles] = useState<{[id: string]: File | null}>({});
 
   const [onedrive, setOnedrive] = useState("");
   const [drive, setDrive] = useState("");
@@ -74,6 +78,8 @@ function PenulisanPage() {
   const [showCopyDrive, setShowCopyDrive] = useState(false);
 
   const { user, loading } = useAuth();
+  const authCalendar = typeof window !== "undefined" ? useAuthCalendar() : null;
+  const calendarToken = authCalendar?.calendarToken;
   const router = useRouter();
   const [docRef, setDocRef] = useState<any>(null);
 
@@ -277,19 +283,91 @@ function PenulisanPage() {
     if (docRef) await setDoc(docRef, { penulisanList, tugasList, berkasList: updated, onedrive, drive }, { merge: true });
   }
 
-  // Upload Berkas (Firebase Storage)
-  async function handleBerkasUpload(id: string, file: File) {
+  // Upload Berkas (Google Drive API)
+  // Konversi ArrayBuffer ke base64 (untuk upload Google Drive)
+  function arrayBufferToBase64(buffer: ArrayBuffer) {
+    let binary = '';
+    const bytes = new Uint8Array(buffer);
+    const len = bytes.byteLength;
+    for (let i = 0; i < len; i++) {
+      binary += String.fromCharCode(bytes[i]);
+    }
+    return btoa(binary);
+  }
+
+  async function handleBerkasUpload(id: string) {
+    const file = pendingFiles[id];
+    if (!file) {
+      setUploadError("Tidak ada file yang dipilih.");
+      return;
+    }
     setUploadingId(id);
     setUploadError(null);
     try {
-      const storageRef = ref(storage, `berkas_ta/${id}_${file.name}`);
-      await uploadBytes(storageRef, file);
-      const url = await getDownloadURL(storageRef);
+      if (!calendarToken) {
+        setUploadError("Akses Google Drive tidak tersedia. Silakan login ulang.");
+        setUploadingId(null);
+        return;
+      }
+      console.log("[UPLOAD] Mulai upload file:", file.name);
+      // Step 1: Buat metadata file
+      const metadata = {
+        name: file.name,
+        mimeType: file.type || 'application/octet-stream',
+      };
+      // Step 2: Buat multipart body
+      const boundary = '-------314159265358979323846';
+      const delimiter = `\r\n--${boundary}\r\n`;
+      const close_delim = `\r\n--${boundary}--`;
+      const reader = await file.arrayBuffer();
+      const base64Data = arrayBufferToBase64(reader);
+      const multipartRequestBody =
+        delimiter +
+        'Content-Type: application/json; charset=UTF-8\r\n\r\n' +
+        JSON.stringify(metadata) +
+        delimiter +
+        `Content-Type: ${file.type || 'application/octet-stream'}\r\n` +
+        'Content-Transfer-Encoding: base64\r\n' +
+        '\r\n' +
+        base64Data +
+        close_delim;
+      // Step 3: Upload ke Google Drive
+      const res = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${calendarToken}`,
+          'Content-Type': `multipart/related; boundary=${boundary}`,
+        },
+        body: multipartRequestBody,
+      });
+      console.log("[UPLOAD] Response status:", res.status);
+      if (!res.ok) {
+        const errText = await res.text();
+        setUploadError("Gagal upload ke Google Drive: " + errText);
+        setUploadingId(null);
+        return;
+      }
+      const data = await res.json();
+      console.log("[UPLOAD] File uploaded, Google Drive file id:", data.id);
+      // Step 4: Dapatkan link file
+      const fileId = data.id;
+      // Buat file bisa diakses (optional: share ke publik)
+      const permRes = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}/permissions`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${calendarToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ role: 'reader', type: 'anyone' }),
+      });
+      console.log("[UPLOAD] Permission response:", permRes.status);
+      const url = `https://drive.google.com/file/d/${fileId}/view?usp=sharing`;
+      // Simpan fileId juga
       const updated = berkasList.map(item =>
-        item.id === id ? { ...item, fileUrl: url, fileName: file.name } : item
+        item.id === id ? { ...item, fileUrl: url, fileName: file.name, fileId } : item
       );
       setBerkasList(updated);
-      // Pastikan update Firestore dengan data updated, bukan state lama
+      setPendingFiles(prev => ({ ...prev, [id]: null }));
       if (docRef) {
         await setDoc(docRef, {
           penulisanList,
@@ -299,17 +377,49 @@ function PenulisanPage() {
           drive
         }, { merge: true });
       }
+      setUploadError(null);
+      setTimeout(() => {
+        setUploadError(null);
+      }, 2000);
     } catch (err: any) {
-      setUploadError("Gagal upload berkas.");
+      setUploadError("Gagal upload ke Google Drive: " + (err?.message || ""));
+      console.error("[UPLOAD] Error:", err);
     }
     setUploadingId(null);
   }
   async function handleBerkasRemoveFile(id: string) {
-    const updated = berkasList.map(item =>
-      item.id === id ? { ...item, fileUrl: undefined, fileName: undefined } : item
-    );
+    const item = berkasList.find(item => item.id === id);
+    let errorDeleteDrive: string | null = null;
+    // Jika ada fileId, hapus file di Google Drive
+    if (item?.fileId && calendarToken) {
+      try {
+        const res = await fetch(`https://www.googleapis.com/drive/v3/files/${item.fileId}`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${calendarToken}`,
+          },
+        });
+        if (!res.ok && res.status !== 404) {
+          errorDeleteDrive = await res.text();
+        }
+      } catch (err: any) {
+        errorDeleteDrive = err?.message || 'Gagal menghapus file di Google Drive';
+      }
+    }
+    // Hapus field fileUrl, fileName, fileId dari object
+    const updated = berkasList.map(item => {
+      if (item.id === id) {
+        const { fileUrl, fileName, fileId, ...rest } = item;
+        return rest;
+      }
+      return item;
+    });
     setBerkasList(updated);
     if (docRef) await setDoc(docRef, { penulisanList, tugasList, berkasList: updated, onedrive, drive }, { merge: true });
+    if (errorDeleteDrive) {
+      setUploadError('Gagal menghapus file di Google Drive: ' + errorDeleteDrive);
+      setTimeout(() => setUploadError(null), 4000);
+    }
   }
 
   // OneDrive & Drive
@@ -509,33 +619,81 @@ function PenulisanPage() {
               marginBottom: "0.9em",
               transition: "box-shadow 0.2s, background 0.2s"
             }}>
-              <div style={{ fontWeight: 500, fontSize: "0.98em", wordBreak: "break-word", marginBottom: "0.7em" }}>{item.text}</div>
-              <div style={{ display: "flex", gap: "0.7em", width: "100%", marginBottom: "0.5em" }}>
-                <input
-                  type="checkbox"
-                  checked={getBabChecked(item)}
-                  onChange={() => onCheck(i)}
-                  disabled={isPenulisan && item.subBab && item.subBab.length > 0}
-                  style={{ accentColor: "#6366f1", width: "1em", height: "1em", cursor: (isPenulisan && item.subBab && item.subBab.length > 0) ? "not-allowed" : "pointer" }}
-                />
-                <button onClick={() => {
-                  onEdit(item);
-                }} style={{ ...btn, padding: "0.4em 0.7em", fontSize: "0.95em" }}>Edit</button>
-                <button onClick={() => onDelete(item.id)} style={{ ...btnRed, padding: "0.4em 0.7em", fontSize: "0.95em" }}>Hapus</button>
-                {/* Tombol tambah sub-bab hanya untuk penulisan */}
-                {isPenulisan && (
-                  <button type="button" onClick={() => {
-                    setAddSubBabIdx(i);
-                    setAddSubBabValue("");
-                    setShowAddSubBabModal(true);
-                    if (!item.subBab) {
-                      const updated = [...penulisanList];
-                      updated[i].subBab = [];
-                      setPenulisanList(updated);
-                    }
-                  }} style={{ ...btn, padding: "0.4em 0.7em", fontSize: "0.95em" }}>+</button>
-                )}
-              </div>
+              {/* Untuk checklist penulisan, edit pakai modal */}
+              {isPenulisan ? (
+                <>
+                  <div style={{ fontWeight: 500, fontSize: "0.98em", wordBreak: "break-word", marginBottom: "0.7em" }}>{item.text}</div>
+                  <div style={{ display: "flex", gap: "0.7em", width: "100%", marginBottom: "0.5em" }}>
+                    <input
+                      type="checkbox"
+                      checked={getBabChecked(item)}
+                      onChange={() => onCheck(i)}
+                      disabled={item.subBab && item.subBab.length > 0}
+                      style={{ accentColor: "#6366f1", width: "1em", height: "1em", cursor: (item.subBab && item.subBab.length > 0) ? "not-allowed" : "pointer" }}
+                    />
+                    <button onClick={() => {
+                      setEditBabIdx(i);
+                      setEditBabName(item.text);
+                      setEditSubBabList(item.subBab ? [...item.subBab] : []);
+                      setShowEditBabModal(true);
+                    }} style={{ ...btn, padding: "0.4em 0.7em", fontSize: "0.95em" }}>Edit</button>
+                    <button onClick={() => onDelete(item.id)} style={{ ...btnRed, padding: "0.4em 0.7em", fontSize: "0.95em" }}>Hapus</button>
+                    {/* Tombol tambah sub-bab hanya untuk penulisan */}
+                    <button type="button" onClick={() => {
+                      setAddSubBabIdx(i);
+                      setAddSubBabValue("");
+                      setShowAddSubBabModal(true);
+                      if (!item.subBab) {
+                        const updated = [...penulisanList];
+                        updated[i].subBab = [];
+                        setPenulisanList(updated);
+                      }
+                    }} style={{ ...btn, padding: "0.4em 0.7em", fontSize: "0.95em" }}>+</button>
+                  </div>
+                </>
+              ) : (
+                // Untuk tugas dan berkas tetap inline edit
+                <>
+                  {editId === item.id ? (
+                    <>
+                      <input
+                        type="text"
+                        value={editText}
+                        onChange={e => setEditText(e.target.value)}
+                        style={{
+                          width: "70%",
+                          padding: "0.5em",
+                          borderRadius: "6px",
+                          border: `1.5px solid ${colorAccent}`,
+                          fontSize: "1em",
+                          marginBottom: "0.7em"
+                        }}
+                      />
+                      <div style={{ display: "flex", gap: "0.7em", marginBottom: "0.5em" }}>
+                        <button onClick={onEditSave} style={{ ...btn, padding: "0.4em 0.7em", fontSize: "0.95em" }}>Simpan</button>
+                        <button onClick={() => { setEditId(null); setEditText(""); }} style={{ ...btnGray, padding: "0.4em 0.7em", fontSize: "0.95em" }}>Batal</button>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div style={{ fontWeight: 500, fontSize: "0.98em", wordBreak: "break-word", marginBottom: "0.7em" }}>{item.text}</div>
+                      <div style={{ display: "flex", gap: "0.7em", width: "100%", marginBottom: "0.5em" }}>
+                        <input
+                          type="checkbox"
+                          checked={getBabChecked(item)}
+                          onChange={() => onCheck(i)}
+                          disabled={isPenulisan && item.subBab && item.subBab.length > 0}
+                          style={{ accentColor: "#6366f1", width: "1em", height: "1em", cursor: (isPenulisan && item.subBab && item.subBab.length > 0) ? "not-allowed" : "pointer" }}
+                        />
+                        <button onClick={() => {
+                          onEdit(item);
+                        }} style={{ ...btn, padding: "0.4em 0.7em", fontSize: "0.95em" }}>Edit</button>
+                        <button onClick={() => onDelete(item.id)} style={{ ...btnRed, padding: "0.4em 0.7em", fontSize: "0.95em" }}>Hapus</button>
+                      </div>
+                    </>
+                  )}
+                </>
+              )}
               {/* SubBab section hanya untuk penulisan */}
               {isPenulisan && item.subBab && item.subBab.length > 0 && (
                 <div style={{ marginLeft: "1.5em", marginTop: "0.7em", display: "flex", flexDirection: "column", gap: "0.6em" }}>
@@ -568,34 +726,69 @@ function PenulisanPage() {
               {isBerkas && (
                 <div style={{ marginTop: "0.7em" }}>
                   {item.fileUrl ? (
-                    <div style={{ display: "flex", alignItems: "center", gap: "0.7em" }}>
-                      <a href={item.fileUrl} target="_blank" rel="noopener noreferrer" style={{ color: colorAccent, fontWeight: 500 }}>
-                        {item.fileName || "Lihat File"}
-                      </a>
-                      <button
-                        onClick={() => handleBerkasRemoveFile(item.id)}
-                        style={{ ...btnRed, padding: "0.3em 0.7em", fontSize: "0.95em" }}
-                      >
-                        Hapus File
-                      </button>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "0.5em", alignItems: "flex-start" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "0.7em" }}>
+                        <span style={{ fontSize: "1.2em" }}>📎</span>
+                        <a href={item.fileUrl} target="_blank" rel="noopener noreferrer" style={{ color: colorAccent, fontWeight: 600, textDecoration: "underline", fontSize: "1.05em" }}>
+                          {item.fileName || "Lihat File"}
+                        </a>
+                        <button
+                          onClick={() => handleBerkasRemoveFile(item.id)}
+                          style={{ ...btnRed, padding: "0.3em 0.7em", fontSize: "0.95em", fontWeight: 600 }}
+                        >
+                          Hapus File
+                        </button>
+                      </div>
+                      {/* Preview gambar */}
+                      {item.fileName && /\.(jpg|jpeg|png|gif)$/i.test(item.fileName) && (
+                        <img src={item.fileUrl} alt={item.fileName} style={{ maxWidth: 180, maxHeight: 120, borderRadius: 8, border: `1px solid ${colorAccentSoft}` }} />
+                      )}
+                      {/* Preview PDF */}
+                      {item.fileName && /\.pdf$/i.test(item.fileName) && (
+                        <iframe src={item.fileUrl} title={item.fileName} style={{ width: 180, height: 120, border: `1px solid ${colorAccentSoft}`, borderRadius: 8 }} />
+                      )}
                     </div>
                   ) : (
-                    <div style={{ display: "flex", alignItems: "center", gap: "0.7em" }}>
-                      <input
-                        type="file"
-                        onChange={e => {
-                          if (e.target.files && e.target.files[0]) {
-                            handleBerkasUpload(item.id, e.target.files[0]);
-                          }
-                        }}
-                        disabled={uploadingId === item.id}
-                        style={{ fontSize: "0.98em" }}
-                      />
+                    <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: "0.5em" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "0.7em" }}>
+                        <input
+                          type="file"
+                          onChange={e => {
+                            if (e.target.files && e.target.files[0]) {
+                              setPendingFiles(prev => ({ ...prev, [item.id]: e.target.files![0] }));
+                            }
+                          }}
+                          disabled={uploadingId === item.id}
+                          style={{ fontSize: "0.98em" }}
+                          id={`file-input-${item.id}`}
+                        />
+                        {pendingFiles[item.id] && (
+                          <>
+                            <button
+                              onClick={async () => {
+                                await handleBerkasUpload(item.id);
+                                // Reset file input setelah upload sukses/gagal
+                                const input = document.getElementById(`file-input-${item.id}`) as HTMLInputElement;
+                                if (input) input.value = "";
+                              }}
+                              style={{ ...btn, padding: "0.3em 0.7em", fontSize: "0.95em", fontWeight: 600 }}
+                              disabled={uploadingId === item.id}
+                            >
+                              {uploadingId === item.id ? "Uploading..." : "Upload"}
+                            </button>
+                          </>
+                        )}
+                      </div>
+                      {/* Feedback upload */}
                       {uploadingId === item.id && (
-                        <span style={{ color: colorAccent, fontWeight: 500 }}>Uploading...</span>
+                        <span style={{ color: colorAccent, fontWeight: 500 }}>Uploading file ke Google Drive...</span>
                       )}
-                      {uploadError && uploadingId === item.id && (
-                        <span style={{ color: colorDanger, fontWeight: 500 }}>{uploadError}</span>
+                      {uploadError && (
+                        <span style={{ color: uploadError.includes('sukses') ? colorSuccess : colorDanger, fontWeight: 500 }}>{uploadError}</span>
+                      )}
+                      {/* Sukses upload */}
+                      {!uploadingId && !uploadError && !pendingFiles[item.id] && item.fileUrl && (
+                        <span style={{ color: colorSuccess, fontWeight: 500 }}>Upload sukses: {item.fileName}</span>
                       )}
                     </div>
                   )}
