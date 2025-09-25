@@ -18,6 +18,11 @@ type ChecklistItem = {
   subBab?: ChecklistItem[];
 };
 
+type BerkasChecklist = {
+  proposal: ChecklistItem[];
+  hasil: ChecklistItem[];
+};
+
 const defaultPenulisan = [
   { id: uuidv4(), text: "Judul", checked: false },
   { id: uuidv4(), text: "Bab 1 - Pendahuluan", checked: false, subBab: [] },
@@ -28,10 +33,19 @@ const defaultPenulisan = [
 ];
 
 const defaultBerkas = [
+];
+
+const defaultBerkasProposal = [
   { id: uuidv4(), text: "KTP", checked: false },
   { id: uuidv4(), text: "KTM", checked: false },
   { id: uuidv4(), text: "Surat Pengantar", checked: false },
   { id: uuidv4(), text: "Proposal", checked: false },
+];
+const defaultBerkasHasil = [
+  { id: uuidv4(), text: "KTP", checked: false },
+  { id: uuidv4(), text: "KTM", checked: false },
+  { id: uuidv4(), text: "Surat Pengantar", checked: false },
+  { id: uuidv4(), text: "Laporan Akhir", checked: false },
 ];
 
 // Pastikan semua konstanta warna menggunakan theme dari useState
@@ -61,14 +75,17 @@ function PenulisanPage() {
   const [editTugasId, setEditTugasId] = useState<string | null>(null);
   const [editTugasText, setEditTugasText] = useState("");
 
-  // Checklist Berkas
-  const [berkasList, setBerkasList] = useState<ChecklistItem[]>(defaultBerkas);
-  const [newBerkas, setNewBerkas] = useState("");
-  const [editBerkasId, setEditBerkasId] = useState<string | null>(null);
-  const [editBerkasText, setEditBerkasText] = useState("");
+  // Checklist Berkas Proposal & Hasil
+  const [berkasProposal, setBerkasProposal] = useState<ChecklistItem[]>(defaultBerkasProposal);
+  const [berkasHasil, setBerkasHasil] = useState<ChecklistItem[]>(defaultBerkasHasil);
+  const [newBerkasProposal, setNewBerkasProposal] = useState("");
+  const [newBerkasHasil, setNewBerkasHasil] = useState("");
+  const [editBerkasProposalId, setEditBerkasProposalId] = useState<string | null>(null);
+  const [editBerkasHasilId, setEditBerkasHasilId] = useState<string | null>(null);
+  const [editBerkasProposalText, setEditBerkasProposalText] = useState("");
+  const [editBerkasHasilText, setEditBerkasHasilText] = useState("");
   const [uploadingId, setUploadingId] = useState<string | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
-  // State untuk file yang dipilih sebelum upload
   const [pendingFiles, setPendingFiles] = useState<{[id: string]: File | null}>({});
 
   const [onedrive, setOnedrive] = useState("");
@@ -97,13 +114,15 @@ function PenulisanPage() {
         const data = snap.data() as {
           penulisanList?: ChecklistItem[];
           tugasList?: ChecklistItem[];
-          berkasList?: ChecklistItem[];
+          berkasProposal?: ChecklistItem[];
+          berkasHasil?: ChecklistItem[];
           onedrive?: string;
           drive?: string;
         };
         if (Array.isArray(data.penulisanList)) setPenulisanList(data.penulisanList);
         if (Array.isArray(data.tugasList)) setTugasList(data.tugasList);
-        if (Array.isArray(data.berkasList)) setBerkasList(data.berkasList);
+        if (Array.isArray(data.berkasProposal)) setBerkasProposal(data.berkasProposal);
+        if (Array.isArray(data.berkasHasil)) setBerkasHasil(data.berkasHasil);
         if (typeof data.onedrive === "string") setOnedrive(data.onedrive);
         if (typeof data.drive === "string") setDrive(data.drive);
       }
@@ -180,14 +199,14 @@ function PenulisanPage() {
     const updated = [...penulisanList];
     updated[idx].checked = !updated[idx].checked;
     setPenulisanList(updated);
-    if (docRef) await setDoc(docRef, { penulisanList: updated, tugasList, berkasList, onedrive, drive }, { merge: true });
+  if (docRef) await setDoc(docRef, { penulisanList: updated, tugasList, berkasProposal, berkasHasil, onedrive, drive }, { merge: true });
   }
   async function handlePenulisanAdd() {
     if (newPenulisan.trim()) {
       const updated = [...penulisanList, { id: uuidv4(), text: newPenulisan, checked: false }];
       setPenulisanList(updated);
       setNewPenulisan("");
-      if (docRef) await setDoc(docRef, { penulisanList: updated, tugasList, berkasList, onedrive, drive }, { merge: true });
+  if (docRef) await setDoc(docRef, { penulisanList: updated, tugasList, berkasProposal, berkasHasil, onedrive, drive }, { merge: true });
     }
   }
   function startEditPenulisan(item: ChecklistItem) {
@@ -202,13 +221,13 @@ function PenulisanPage() {
       setPenulisanList(updated);
       setEditPenulisanId(null);
       setEditPenulisanText("");
-      if (docRef) await setDoc(docRef, { penulisanList: updated, tugasList, berkasList, onedrive, drive }, { merge: true });
+  if (docRef) await setDoc(docRef, { penulisanList: updated, tugasList, berkasProposal, berkasHasil, onedrive, drive }, { merge: true });
     }
   }
   async function handlePenulisanDelete(id: string) {
     const updated = penulisanList.filter(i => i.id !== id);
     setPenulisanList(updated);
-    if (docRef) await setDoc(docRef, { penulisanList: updated, tugasList, berkasList, onedrive, drive }, { merge: true });
+  if (docRef) await setDoc(docRef, { penulisanList: updated, tugasList, berkasProposal, berkasHasil, onedrive, drive }, { merge: true });
   }
 
   // Checklist Tugas Actions
@@ -216,14 +235,14 @@ function PenulisanPage() {
     const updated = [...tugasList];
     updated[idx].checked = !updated[idx].checked;
     setTugasList(updated);
-    if (docRef) await setDoc(docRef, { penulisanList, tugasList: updated, berkasList, onedrive, drive }, { merge: true });
+  if (docRef) await setDoc(docRef, { penulisanList, tugasList: updated, berkasProposal, berkasHasil, onedrive, drive }, { merge: true });
   }
   async function handleTugasAdd() {
     if (newTugas.trim()) {
       const updated = [...tugasList, { id: uuidv4(), text: newTugas, checked: false }];
       setTugasList(updated);
       setNewTugas("");
-      if (docRef) await setDoc(docRef, { penulisanList, tugasList: updated, berkasList, onedrive, drive }, { merge: true });
+  if (docRef) await setDoc(docRef, { penulisanList, tugasList: updated, berkasProposal, berkasHasil, onedrive, drive }, { merge: true });
     }
   }
   function startEditTugas(item: ChecklistItem) {
@@ -238,198 +257,98 @@ function PenulisanPage() {
       setTugasList(updated);
       setEditTugasId(null);
       setEditTugasText("");
-      if (docRef) await setDoc(docRef, { penulisanList, tugasList: updated, berkasList, onedrive, drive }, { merge: true });
+  if (docRef) await setDoc(docRef, { penulisanList, tugasList: updated, berkasProposal, berkasHasil, onedrive, drive }, { merge: true });
     }
   }
   async function handleTugasDelete(id: string) {
     const updated = tugasList.filter(i => i.id !== id);
     setTugasList(updated);
-    if (docRef) await setDoc(docRef, { penulisanList, tugasList: updated, berkasList, onedrive, drive }, { merge: true });
+  if (docRef) await setDoc(docRef, { penulisanList, tugasList: updated, berkasProposal, berkasHasil, onedrive, drive }, { merge: true });
   }
 
   // Checklist Berkas Actions
-  async function handleBerkasCheck(idx: number) {
-    const updated = [...berkasList];
+  // Checklist Berkas Proposal Actions
+  async function handleBerkasProposalCheck(idx: number) {
+    const updated = [...berkasProposal];
     updated[idx].checked = !updated[idx].checked;
-    setBerkasList(updated);
-    if (docRef) await setDoc(docRef, { penulisanList, tugasList, berkasList: updated, onedrive, drive }, { merge: true });
+    setBerkasProposal(updated);
+    if (docRef) await setDoc(docRef, { penulisanList, tugasList, berkasProposal: updated, berkasHasil, onedrive, drive }, { merge: true });
   }
-  async function handleBerkasAdd() {
-    if (newBerkas.trim()) {
-      const updated = [...berkasList, { id: uuidv4(), text: newBerkas, checked: false }];
-      setBerkasList(updated);
-      setNewBerkas("");
-      if (docRef) await setDoc(docRef, { penulisanList, tugasList, berkasList: updated, onedrive, drive }, { merge: true });
+  async function handleBerkasProposalAdd() {
+    if (newBerkasProposal.trim()) {
+      const updated = [...berkasProposal, { id: uuidv4(), text: newBerkasProposal, checked: false }];
+      setBerkasProposal(updated);
+      setNewBerkasProposal("");
+      if (docRef) await setDoc(docRef, { penulisanList, tugasList, berkasProposal: updated, berkasHasil, onedrive, drive }, { merge: true });
     }
   }
-  function startEditBerkas(item: ChecklistItem) {
-    setEditBerkasId(item.id);
-    setEditBerkasText(item.text);
+  function startEditBerkasProposal(item: ChecklistItem) {
+    setEditBerkasProposalId(item.id);
+    setEditBerkasProposalText(item.text);
   }
-  async function handleBerkasEditSave() {
-    if (editBerkasId && editBerkasText.trim()) {
-      const updated = berkasList.map(i =>
-        i.id === editBerkasId ? { ...i, text: editBerkasText } : i
+  async function handleBerkasProposalEditSave() {
+    if (editBerkasProposalId && editBerkasProposalText.trim()) {
+      const updated = berkasProposal.map(i =>
+        i.id === editBerkasProposalId ? { ...i, text: editBerkasProposalText } : i
       );
-      setBerkasList(updated);
-      setEditBerkasId(null);
-      setEditBerkasText("");
-      if (docRef) await setDoc(docRef, { penulisanList, tugasList, berkasList: updated, onedrive, drive }, { merge: true });
+      setBerkasProposal(updated);
+      setEditBerkasProposalId(null);
+      setEditBerkasProposalText("");
+      if (docRef) await setDoc(docRef, { penulisanList, tugasList, berkasProposal: updated, berkasHasil, onedrive, drive }, { merge: true });
     }
   }
-  async function handleBerkasDelete(id: string) {
-    const updated = berkasList.filter(i => i.id !== id);
-    setBerkasList(updated);
-    if (docRef) await setDoc(docRef, { penulisanList, tugasList, berkasList: updated, onedrive, drive }, { merge: true });
+  async function handleBerkasProposalDelete(id: string) {
+    const updated = berkasProposal.filter(i => i.id !== id);
+    setBerkasProposal(updated);
+    if (docRef) await setDoc(docRef, { penulisanList, tugasList, berkasProposal: updated, berkasHasil, onedrive, drive }, { merge: true });
   }
 
-  // Upload Berkas (Google Drive API)
-  // Konversi ArrayBuffer ke base64 (untuk upload Google Drive)
-  function arrayBufferToBase64(buffer: ArrayBuffer) {
-    let binary = '';
-    const bytes = new Uint8Array(buffer);
-    const len = bytes.byteLength;
-    for (let i = 0; i < len; i++) {
-      binary += String.fromCharCode(bytes[i]);
+  // Checklist Berkas Hasil Actions
+  async function handleBerkasHasilCheck(idx: number) {
+    const updated = [...berkasHasil];
+    updated[idx].checked = !updated[idx].checked;
+    setBerkasHasil(updated);
+    if (docRef) await setDoc(docRef, { penulisanList, tugasList, berkasProposal, berkasHasil: updated, onedrive, drive }, { merge: true });
+  }
+  async function handleBerkasHasilAdd() {
+    if (newBerkasHasil.trim()) {
+      const updated = [...berkasHasil, { id: uuidv4(), text: newBerkasHasil, checked: false }];
+      setBerkasHasil(updated);
+      setNewBerkasHasil("");
+      if (docRef) await setDoc(docRef, { penulisanList, tugasList, berkasProposal, berkasHasil: updated, onedrive, drive }, { merge: true });
     }
-    return btoa(binary);
+  }
+  function startEditBerkasHasil(item: ChecklistItem) {
+    setEditBerkasHasilId(item.id);
+    setEditBerkasHasilText(item.text);
+  }
+  async function handleBerkasHasilEditSave() {
+    if (editBerkasHasilId && editBerkasHasilText.trim()) {
+      const updated = berkasHasil.map(i =>
+        i.id === editBerkasHasilId ? { ...i, text: editBerkasHasilText } : i
+      );
+      setBerkasHasil(updated);
+      setEditBerkasHasilId(null);
+      setEditBerkasHasilText("");
+      if (docRef) await setDoc(docRef, { penulisanList, tugasList, berkasProposal, berkasHasil: updated, onedrive, drive }, { merge: true });
+    }
+  }
+  async function handleBerkasHasilDelete(id: string) {
+    const updated = berkasHasil.filter(i => i.id !== id);
+    setBerkasHasil(updated);
+    if (docRef) await setDoc(docRef, { penulisanList, tugasList, berkasProposal, berkasHasil: updated, onedrive, drive }, { merge: true });
   }
 
-  async function handleBerkasUpload(id: string) {
-    const file = pendingFiles[id];
-    if (!file) {
-      setUploadError("Tidak ada file yang dipilih.");
-      return;
-    }
-    setUploadingId(id);
-    setUploadError(null);
-    try {
-      if (!calendarToken) {
-        setUploadError("Akses Google Drive tidak tersedia. Silakan login ulang.");
-        setUploadingId(null);
-        return;
-      }
-      console.log("[UPLOAD] Mulai upload file:", file.name);
-      // Step 1: Buat metadata file
-      const metadata = {
-        name: file.name,
-        mimeType: file.type || 'application/octet-stream',
-      };
-      // Step 2: Buat multipart body
-      const boundary = '-------314159265358979323846';
-      const delimiter = `\r\n--${boundary}\r\n`;
-      const close_delim = `\r\n--${boundary}--`;
-      const reader = await file.arrayBuffer();
-      const base64Data = arrayBufferToBase64(reader);
-      const multipartRequestBody =
-        delimiter +
-        'Content-Type: application/json; charset=UTF-8\r\n\r\n' +
-        JSON.stringify(metadata) +
-        delimiter +
-        `Content-Type: ${file.type || 'application/octet-stream'}\r\n` +
-        'Content-Transfer-Encoding: base64\r\n' +
-        '\r\n' +
-        base64Data +
-        close_delim;
-      // Step 3: Upload ke Google Drive
-      const res = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${calendarToken}`,
-          'Content-Type': `multipart/related; boundary=${boundary}`,
-        },
-        body: multipartRequestBody,
-      });
-      console.log("[UPLOAD] Response status:", res.status);
-      if (!res.ok) {
-        const errText = await res.text();
-        setUploadError("Gagal upload ke Google Drive: " + errText);
-        setUploadingId(null);
-        return;
-      }
-      const data = await res.json();
-      console.log("[UPLOAD] File uploaded, Google Drive file id:", data.id);
-      // Step 4: Dapatkan link file
-      const fileId = data.id;
-      // Buat file bisa diakses (optional: share ke publik)
-      const permRes = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}/permissions`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${calendarToken}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ role: 'reader', type: 'anyone' }),
-      });
-      console.log("[UPLOAD] Permission response:", permRes.status);
-      const url = `https://drive.google.com/file/d/${fileId}/view?usp=sharing`;
-      // Simpan fileId juga
-      const updated = berkasList.map(item =>
-        item.id === id ? { ...item, fileUrl: url, fileName: file.name, fileId } : item
-      );
-      setBerkasList(updated);
-      setPendingFiles(prev => ({ ...prev, [id]: null }));
-      if (docRef) {
-        await setDoc(docRef, {
-          penulisanList,
-          tugasList,
-          berkasList: updated,
-          onedrive,
-          drive
-        }, { merge: true });
-      }
-      setUploadError(null);
-      setTimeout(() => {
-        setUploadError(null);
-      }, 2000);
-    } catch (err: any) {
-      setUploadError("Gagal upload ke Google Drive: " + (err?.message || ""));
-      console.error("[UPLOAD] Error:", err);
-    }
-    setUploadingId(null);
-  }
-  async function handleBerkasRemoveFile(id: string) {
-    const item = berkasList.find(item => item.id === id);
-    let errorDeleteDrive: string | null = null;
-    // Jika ada fileId, hapus file di Google Drive
-    if (item?.fileId && calendarToken) {
-      try {
-        const res = await fetch(`https://www.googleapis.com/drive/v3/files/${item.fileId}`, {
-          method: 'DELETE',
-          headers: {
-            'Authorization': `Bearer ${calendarToken}`,
-          },
-        });
-        if (!res.ok && res.status !== 404) {
-          errorDeleteDrive = await res.text();
-        }
-      } catch (err: any) {
-        errorDeleteDrive = err?.message || 'Gagal menghapus file di Google Drive';
-      }
-    }
-    // Hapus field fileUrl, fileName, fileId dari object
-    const updated = berkasList.map(item => {
-      if (item.id === id) {
-        const { fileUrl, fileName, fileId, ...rest } = item;
-        return rest;
-      }
-      return item;
-    });
-    setBerkasList(updated);
-    if (docRef) await setDoc(docRef, { penulisanList, tugasList, berkasList: updated, onedrive, drive }, { merge: true });
-    if (errorDeleteDrive) {
-      setUploadError('Gagal menghapus file di Google Drive: ' + errorDeleteDrive);
-      setTimeout(() => setUploadError(null), 4000);
-    }
-  }
+  // TODO: Implement upload/remove file logic for berkasProposal and berkasHasil if needed
 
   // OneDrive & Drive
   async function handleOnedriveChange(val: string) {
     setOnedrive(val);
-    if (docRef) await setDoc(docRef, { penulisanList, tugasList, berkasList, onedrive: val, drive }, { merge: true });
+  if (docRef) await setDoc(docRef, { penulisanList, tugasList, berkasProposal, berkasHasil, onedrive: val, drive }, { merge: true });
   }
   async function handleDriveChange(val: string) {
     setDrive(val);
-    if (docRef) await setDoc(docRef, { penulisanList, tugasList, berkasList, onedrive, drive: val }, { merge: true });
+  if (docRef) await setDoc(docRef, { penulisanList, tugasList, berkasProposal, berkasHasil, onedrive, drive: val }, { merge: true });
   }
   function handleCopyOneDrive() {
     if (onedrive) {
@@ -449,10 +368,10 @@ function PenulisanPage() {
   // State untuk popup input checklist
   const [showAddModal, setShowAddModal] = useState(false);
   const [modalValue, setModalValue] = useState("");
-  const [modalType, setModalType] = useState<"penulisan"|"tugas"|"berkas">("penulisan");
+  const [modalType, setModalType] = useState<"penulisan"|"tugas"|"berkasProposal"|"berkasHasil">("penulisan");
 
   // Fungsi untuk buka modal
-  function openAddModal(type: "penulisan"|"tugas"|"berkas") {
+  function openAddModal(type: "penulisan"|"tugas"|"berkasProposal"|"berkasHasil") {
     setModalType(type);
     setShowAddModal(true);
     setModalValue("");
@@ -464,8 +383,10 @@ function PenulisanPage() {
       handlePenulisanAddModal(modalValue);
     } else if (modalType === "tugas") {
       handleTugasAddModal(modalValue);
+    } else if (modalType === "berkasProposal") {
+      handleBerkasProposalAddModal(modalValue);
     } else {
-      handleBerkasAddModal(modalValue);
+      handleBerkasHasilAddModal(modalValue);
     }
     setShowAddModal(false);
     setModalValue("");
@@ -474,17 +395,22 @@ function PenulisanPage() {
   function handlePenulisanAddModal(val: string) {
     const updated = [...penulisanList, { id: uuidv4(), text: val, checked: false }];
     setPenulisanList(updated);
-    if (docRef) setDoc(docRef, { penulisanList: updated, tugasList, berkasList, onedrive, drive }, { merge: true });
+    if (docRef) setDoc(docRef, { penulisanList: updated, tugasList, berkasProposal, berkasHasil, onedrive, drive }, { merge: true });
   }
   function handleTugasAddModal(val: string) {
     const updated = [...tugasList, { id: uuidv4(), text: val, checked: false }];
     setTugasList(updated);
-    if (docRef) setDoc(docRef, { penulisanList, tugasList: updated, berkasList, onedrive, drive }, { merge: true });
+    if (docRef) setDoc(docRef, { penulisanList, tugasList: updated, berkasProposal, berkasHasil, onedrive, drive }, { merge: true });
   }
-  function handleBerkasAddModal(val: string) {
-    const updated = [...berkasList, { id: uuidv4(), text: val, checked: false }];
-    setBerkasList(updated);
-    if (docRef) setDoc(docRef, { penulisanList, tugasList, berkasList: updated, onedrive, drive }, { merge: true });
+  function handleBerkasProposalAddModal(val: string) {
+    const updated = [...berkasProposal, { id: uuidv4(), text: val, checked: false }];
+    setBerkasProposal(updated);
+    if (docRef) setDoc(docRef, { penulisanList, tugasList, berkasProposal: updated, berkasHasil, onedrive, drive }, { merge: true });
+  }
+  function handleBerkasHasilAddModal(val: string) {
+    const updated = [...berkasHasil, { id: uuidv4(), text: val, checked: false }];
+    setBerkasHasil(updated);
+    if (docRef) setDoc(docRef, { penulisanList, tugasList, berkasProposal, berkasHasil: updated, onedrive, drive }, { merge: true });
   }
 
   // State untuk sub-bab
@@ -504,7 +430,7 @@ function PenulisanPage() {
     // Bab checked jika semua subBab checked
     updated[babIdx].checked = updated[babIdx].subBab!.every(sub => sub.checked);
     setPenulisanList(updated);
-    if (docRef) await setDoc(docRef, { penulisanList: updated, tugasList, berkasList, onedrive, drive }, { merge: true });
+  if (docRef) await setDoc(docRef, { penulisanList: updated, tugasList, berkasProposal, berkasHasil, onedrive, drive }, { merge: true });
   }
   async function handleAddSubBab(babIdx: number) {
     const bab = penulisanList[babIdx];
@@ -515,7 +441,7 @@ function PenulisanPage() {
     updated[babIdx].subBab!.push({ id: uuidv4(), text: value, checked: false });
     setPenulisanList(updated);
     setSubBabInput(prev => ({ ...prev, [bab.id]: "" }));
-    if (docRef) await setDoc(docRef, { penulisanList: updated, tugasList, berkasList, onedrive, drive }, { merge: true });
+  if (docRef) await setDoc(docRef, { penulisanList: updated, tugasList, berkasProposal, berkasHasil, onedrive, drive }, { merge: true });
   }
 
   // State untuk modal edit bab dan sub-bab
@@ -587,7 +513,7 @@ function PenulisanPage() {
     editText: string;
     setEditText: (txt: string) => void;
     onEditSave: () => void;
-    setEditId: typeof setEditPenulisanId | typeof setEditBerkasId;
+  setEditId: typeof setEditPenulisanId | typeof setEditBerkasProposalId | typeof setEditBerkasHasilId;
     placeholder: string;
     newValue: string;
     setNewValue: (txt: string) => void;
@@ -732,12 +658,6 @@ function PenulisanPage() {
                         <a href={item.fileUrl} target="_blank" rel="noopener noreferrer" style={{ color: colorAccent, fontWeight: 600, textDecoration: "underline", fontSize: "1.05em" }}>
                           {item.fileName || "Lihat File"}
                         </a>
-                        <button
-                          onClick={() => handleBerkasRemoveFile(item.id)}
-                          style={{ ...btnRed, padding: "0.3em 0.7em", fontSize: "0.95em", fontWeight: 600 }}
-                        >
-                          Hapus File
-                        </button>
                       </div>
                       {/* Preview gambar */}
                       {item.fileName && /\.(jpg|jpeg|png|gif)$/i.test(item.fileName) && (
@@ -764,18 +684,7 @@ function PenulisanPage() {
                         />
                         {pendingFiles[item.id] && (
                           <>
-                            <button
-                              onClick={async () => {
-                                await handleBerkasUpload(item.id);
-                                // Reset file input setelah upload sukses/gagal
-                                const input = document.getElementById(`file-input-${item.id}`) as HTMLInputElement;
-                                if (input) input.value = "";
-                              }}
-                              style={{ ...btn, padding: "0.3em 0.7em", fontSize: "0.95em", fontWeight: 600 }}
-                              disabled={uploadingId === item.id}
-                            >
-                              {uploadingId === item.id ? "Uploading..." : "Upload"}
-                            </button>
+                            {/* Upload button removed, implement if needed for berkasProposal/berkasHasil */}
                           </>
                         )}
                       </div>
@@ -800,7 +709,7 @@ function PenulisanPage() {
         <div style={{ display: "flex", gap: "0.5em", marginTop: "0.3em" }}>
           {/* Tombol tambah checklist: buka modal input sesuai tipe */}
           <button
-            onClick={() => openAddModal(isPenulisan ? "penulisan" : placeholder.includes("tugas") ? "tugas" : "berkas")}
+            onClick={() => openAddModal(isPenulisan ? "penulisan" : placeholder.includes("tugas") ? "tugas" : placeholder.includes("proposal") ? "berkasProposal" : "berkasHasil")}
             style={{ ...btn, padding: "0.5em 1em", fontWeight: 500, fontSize: "0.95em", width: "100%" }}
           >
             + Tambah
@@ -882,7 +791,7 @@ function PenulisanPage() {
           })}
         </div>
 
-        {/* Checklist Berkas */}
+        {/* Checklist Berkas Proposal */}
         <div>
           <h2 style={{
             fontSize: "1.4em",
@@ -892,21 +801,48 @@ function PenulisanPage() {
             borderBottom: `2px solid ${colorAccent}`,
             display: "inline-block",
             paddingBottom: "0.3em"
-          }}>Checklist Berkas</h2>
+          }}>Checklist Berkas Seminar Proposal</h2>
           {renderChecklistList({
-            list: berkasList,
-            onCheck: handleBerkasCheck,
-            onEdit: startEditBerkas,
-            onDelete: handleBerkasDelete,
-            editId: editBerkasId,
-            editText: editBerkasText,
-            setEditText: setEditBerkasText,
-            onEditSave: handleBerkasEditSave,
-            setEditId: setEditBerkasId,
-            placeholder: "Tambah berkas...",
-            newValue: newBerkas,
-            setNewValue: setNewBerkas,
-            onAdd: handleBerkasAdd,
+            list: berkasProposal,
+            onCheck: handleBerkasProposalCheck,
+            onEdit: startEditBerkasProposal,
+            onDelete: handleBerkasProposalDelete,
+            editId: editBerkasProposalId,
+            editText: editBerkasProposalText,
+            setEditText: setEditBerkasProposalText,
+            onEditSave: handleBerkasProposalEditSave,
+            setEditId: setEditBerkasProposalId,
+            placeholder: "Tambah berkas proposal...",
+            newValue: newBerkasProposal,
+            setNewValue: setNewBerkasProposal,
+            onAdd: handleBerkasProposalAdd,
+          })}
+        </div>
+        {/* Checklist Berkas Seminar Hasil */}
+        <div>
+          <h2 style={{
+            fontSize: "1.4em",
+            fontWeight: 600,
+            marginBottom: "1.2em",
+            color: theme === "dark" ? "#e0e7ff" : "#111827",
+            borderBottom: `2px solid ${colorAccent}`,
+            display: "inline-block",
+            paddingBottom: "0.3em"
+          }}>Checklist Berkas Seminar Hasil</h2>
+          {renderChecklistList({
+            list: berkasHasil,
+            onCheck: handleBerkasHasilCheck,
+            onEdit: startEditBerkasHasil,
+            onDelete: handleBerkasHasilDelete,
+            editId: editBerkasHasilId,
+            editText: editBerkasHasilText,
+            setEditText: setEditBerkasHasilText,
+            onEditSave: handleBerkasHasilEditSave,
+            setEditId: setEditBerkasHasilId,
+            placeholder: "Tambah berkas hasil...",
+            newValue: newBerkasHasil,
+            setNewValue: setNewBerkasHasil,
+            onAdd: handleBerkasHasilAdd,
           })}
         </div>
 
@@ -987,7 +923,7 @@ function PenulisanPage() {
                   setEditSubBabList([]);
                   setEditSubBabIdx(null);
                   setEditSubBabName("");
-                  if (docRef) await setDoc(docRef, { penulisanList: updated, tugasList, berkasList, onedrive, drive }, { merge: true });
+                  if (docRef) await setDoc(docRef, { penulisanList: updated, tugasList, berkasProposal, berkasHasil, onedrive, drive }, { merge: true });
                 }} style={{ ...btn, flex: 1 }}>Simpan</button>
                 <button onClick={() => {
                   setShowEditBabModal(false);
@@ -1040,7 +976,7 @@ function PenulisanPage() {
                   setShowAddSubBabModal(false);
                   setAddSubBabValue("");
                   setAddSubBabIdx(null);
-                  if (docRef) await setDoc(docRef, { penulisanList: updated, tugasList, berkasList, onedrive, drive }, { merge: true });
+                  if (docRef) await setDoc(docRef, { penulisanList: updated, tugasList, berkasProposal, berkasHasil, onedrive, drive }, { merge: true });
                 }} style={{ ...btn, flex: 1 }}>Simpan</button>
                 <button onClick={() => {
                   setShowAddSubBabModal(false);

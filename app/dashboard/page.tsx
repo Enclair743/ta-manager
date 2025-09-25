@@ -22,6 +22,8 @@ export default function DashboardPage() {
   const [penulisanList, setPenulisanList] = useState<any[]>([]);
   const [tugasList, setTugasList] = useState<any[]>([]);
   const [berkasList, setBerkasList] = useState<any[]>([]);
+  const [berkasProposal, setBerkasProposal] = useState<any[]>([]);
+  const [berkasHasil, setBerkasHasil] = useState<any[]>([]);
   const [calendarEvents, setCalendarEvents] = useState<any[]>([]);
   const [calendarLoading, setCalendarLoading] = useState(false);
   const [userEmail, setUserEmail] = useState<string | null>(null);
@@ -145,14 +147,15 @@ export default function DashboardPage() {
       if (!docRef) return;
       const snap = await getDoc(docRef);
       if (snap.exists()) {
-        const data = snap.data() as { penulisanList?: any[], tugasList?: any[], berkasList?: any[], judul?: string, pembimbing1?: string, pembimbing2?: string };
-        setChecklist(data.penulisanList || []);
-        setPenulisanList(data.penulisanList || []);
-        setTugasList(data.tugasList || []);
-        setBerkasList(data.berkasList || []);
-        setJudul(data.judul || "Judul Tugas Akhir");
-        setPembimbing1(data.pembimbing1 || "");
-        setPembimbing2(data.pembimbing2 || "");
+  const data = snap.data() as { penulisanList?: any[], tugasList?: any[], berkasProposal?: any[], berkasHasil?: any[], judul?: string, pembimbing1?: string, pembimbing2?: string };
+  setChecklist(data.penulisanList || []);
+  setPenulisanList(data.penulisanList || []);
+  setTugasList(data.tugasList || []);
+  setBerkasProposal(data.berkasProposal || []);
+  setBerkasHasil(data.berkasHasil || []);
+  setJudul(data.judul || "Judul Tugas Akhir");
+  setPembimbing1(data.pembimbing1 || "");
+  setPembimbing2(data.pembimbing2 || "");
       }
     }
     fetchChecklist();
@@ -695,16 +698,28 @@ export default function DashboardPage() {
             )}
           </div>
           <div>
-            <h3 style={{ fontSize: "1.09em", fontWeight: 700, marginBottom: "0.6em" }}>📁 Berkas</h3>
+            <h3 style={{ fontSize: "1.09em", fontWeight: 700, marginBottom: "0.6em" }}>📁 Berkas Seminar Proposal</h3>
             <ol style={{ padding: 0, margin: 0 }}>
-              {berkasList.filter(item => item && !item.checked).map(item => (
+              {berkasProposal.filter(item => item && !item.checked).map(item => (
                 <li key={item.id} style={checklistItemStyle}>
-                  <span style={{ background: "#6366f1", color: "#fff", borderRadius: "7px", fontSize: "0.9em", padding: "2px 10px" }}>Berkas</span>
+                  <span style={{ background: "#6366f1", color: "#fff", borderRadius: "7px", fontSize: "0.9em", padding: "2px 10px" }}>Proposal</span>
                   <span>{item.text}</span>
                 </li>
               ))}
-              {berkasList.filter(item => item && !item.checked).length === 0 && (
-                <li style={{ color: '#aaa', fontStyle: 'italic', fontSize: '1.08em', margin: "0.7em 0" }}>Semua berkas selesai! 🎉</li>
+              {berkasProposal.filter(item => item && !item.checked).length === 0 && (
+                <div style={{ color: '#aaa', fontStyle: 'italic', fontSize: '1.08em', margin: "0.7em 0" }}>Semua berkas proposal selesai! 🎉</div>
+              )}
+            </ol>
+            <h3 style={{ fontSize: "1.09em", fontWeight: 700, marginBottom: "0.6em", marginTop: "1em" }}>📁 Berkas Seminar Hasil</h3>
+            <ol style={{ padding: 0, margin: 0 }}>
+              {berkasHasil.filter(item => item && !item.checked).map(item => (
+                <li key={item.id} style={checklistItemStyle}>
+                  <span style={{ background: "#6366f1", color: "#fff", borderRadius: "7px", fontSize: "0.9em", padding: "2px 10px" }}>Hasil</span>
+                  <span>{item.text}</span>
+                </li>
+              ))}
+              {berkasHasil.filter(item => item && !item.checked).length === 0 && (
+                <div style={{ color: '#aaa', fontStyle: 'italic', fontSize: '1.08em', margin: "0.7em 0" }}>Semua berkas hasil selesai! 🎉</div>
               )}
             </ol>
           </div>
@@ -733,10 +748,16 @@ export default function DashboardPage() {
             color="linear-gradient(90deg,#f59e42,#6366f1)"
           />
           <ProgressBar
-            total={berkasList.length}
-            done={berkasList.filter(i => i && i.checked).length}
-            title="Berkas"
+            total={berkasProposal.length}
+            done={berkasProposal.filter(i => i && i.checked).length}
+            title="Berkas Proposal"
             color="linear-gradient(90deg,#34d399,#6366f1)"
+          />
+          <ProgressBar
+            total={berkasHasil.length}
+            done={berkasHasil.filter(i => i && i.checked).length}
+            title="Berkas Hasil"
+            color="linear-gradient(90deg,#6366f1,#34d399)"
           />
         </div>
 
