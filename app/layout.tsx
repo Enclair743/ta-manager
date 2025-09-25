@@ -17,11 +17,20 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   const [theme, setTheme] = useState<"dark" | "light">("dark");
   const [menuOpen, setMenuOpen] = useState(false);
   const pathname = typeof window !== "undefined" ? window.location.pathname : "";
+  // Import hook untuk cek autentikasi
+  const { user, loading } = require("../src/context/AuthContext").useAuth();
 
   useEffect(() => {
     const saved = typeof window !== "undefined" ? localStorage.getItem("theme") : null;
     if (saved === "light" || saved === "dark") setTheme(saved as any);
   }, []);
+
+  // Redirect ke /login jika belum autentikasi dan loading sudah selesai
+  useEffect(() => {
+    if (!loading && !user && typeof window !== "undefined" && pathname !== "/login") {
+      window.location.replace("/login");
+    }
+  }, [user, loading, pathname]);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -181,7 +190,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               zIndex: 1000,
               display: "flex",
               alignItems: "center",
-              justifyContent: "flex-end" // Tidak ada judul, jadi kanan saja
+              justifyContent: "flex-end"
             }}>
               <nav style={{ position: "relative", zIndex: 1001, flex: 1 }}>
                 <ul className="nav-list-desktop">
