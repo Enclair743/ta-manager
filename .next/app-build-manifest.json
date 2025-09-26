@@ -20,30 +20,25 @@
       "static/chunks/main-app.js",
       "static/chunks/app/dashboard/page.js"
     ],
-    "/catatan/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/catatan/page.js"
-    ],
     "/penulisan/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
       "static/chunks/app/penulisan/page.js"
     ],
-    "/referensi/page": [
+    "/catatan/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/referensi/page.js"
+      "static/chunks/app/catatan/page.js"
     ],
     "/kalender/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
       "static/chunks/app/kalender/page.js"
     ],
-    "/panduan/page": [
+    "/_not-found/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/panduan/page.js"
+      "static/chunks/app/_not-found/page.js"
     ]
   }
 }

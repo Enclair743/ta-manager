@@ -21,6 +21,20 @@ function getKalenderDoc(uid: string) {
 }
 
 export default function KalenderPage() {
+  // Modal & fitur baru
+  const [showEventForm, setShowEventForm] = useState(false);
+  const [eventDesc, setEventDesc] = useState("");
+  const [reminders, setReminders] = useState<number[]>([5, 15, 60, 1440]);
+  const [attendees, setAttendees] = useState<string[]>([]);
+  const [recurrence, setRecurrence] = useState("");
+  const [kategori, setKategori] = useState("");
+  const [kategoriList, setKategoriList] = useState<{name: string, color: string}[]>([
+    { name: "Seminar", color: "#6366f1" },
+    { name: "Tugas", color: "#f59e42" },
+    { name: "Rapat", color: "#10b981" }
+  ]);
+  const [newKategori, setNewKategori] = useState("");
+  const [newKategoriColor, setNewKategoriColor] = useState("#6366f1");
   const [events, setEvents] = useState<any[]>([]);
   const [eventsLoading, setEventsLoading] = useState(false);
   const [form, setForm] = useState({
@@ -46,6 +60,12 @@ export default function KalenderPage() {
   useEffect(() => {
     if (typeof window !== "undefined") {
       setTheme(document.body.getAttribute("data-theme") === "light" ? "light" : "dark");
+      // Set zona waktu otomatis
+      const localTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      const indoZones = ["Asia/Jakarta", "Asia/Makassar", "Asia/Jayapura"];
+      if (indoZones.includes(localTz)) {
+        setTimeZone(localTz);
+      }
     }
   }, []);
 
@@ -177,6 +197,10 @@ export default function KalenderPage() {
     try {
       const startISO = toISODateTime(start);
       const endISO = toISODateTime(end);
+      const reminderOverrides = reminders.map(m => ({ method: "popup", minutes: m }));
+      const eventAttendees = attendees.filter(email => email.trim() !== "").map(email => ({ email }));
+      const eventRecurrence = recurrence ? [recurrence] : undefined;
+      const eventDescription = (eventDesc ? eventDesc + "\n" : "") + "__FROM_APP__";
       const res = await fetch(
         "https://www.googleapis.com/calendar/v3/calendars/primary/events",
         {
@@ -187,18 +211,17 @@ export default function KalenderPage() {
           },
           body: JSON.stringify({
             summary: form.summary,
-            description: "__FROM_APP__",
+            description: eventDescription,
             start: { dateTime: startISO, timeZone },
             end: { dateTime: endISO, timeZone },
             reminders: {
               useDefault: false,
-              overrides: [
-                { method: "popup", minutes: 5 },
-                { method: "popup", minutes: 15 },
-                { method: "popup", minutes: 60 },
-                { method: "popup", minutes: 1440 }
-              ]
-            }
+              overrides: reminderOverrides
+            },
+            attendees: eventAttendees,
+            recurrence: eventRecurrence,
+            colorId: kategori ? "11" : undefined,
+            extendedProperties: kategori ? { private: { kategori } } : undefined
           }),
         }
       );
@@ -505,286 +528,260 @@ export default function KalenderPage() {
               >
                 {eventsLoading ? "Mengambil event..." : "Ambil Event Kalender"}
               </button>
-              {calendarToken && (
-                <div>
-                  <form
-                    onSubmit={editId === null ? addEvent : editEvent}
-                    style={{
-                      margin: "2em 0",
-                      padding: "1.5em",
-                      background: theme === "dark" ? "#23272f" : "#fff",
-                      borderRadius: "18px",
-                      boxShadow: theme === "dark"
-                        ? "0 8px 32px rgba(99,102,241,0.18)"
-                        : "0 8px 32px rgba(99,102,241,0.10)",
-                      maxWidth: "420px",
-                      marginLeft: "auto",
-                      marginRight: "auto",
-                      color: theme === "dark" ? "#f3f4f6" : "#222",
-                      border: theme === "dark" ? "1.5px solid #353a47" : "none",
-                    }}
-                  >
-                    <h3 style={{ marginBottom: "0.7em", color: theme === "dark" ? "#f3f4f6" : "#222" }}>
-                      {editId === null ? "Tambah Event" : "Edit Event"}
-                    </h3>
-                    <div style={{ marginBottom: "1em" }}>
-                      <label style={{
-                        color: theme === "dark" ? "#f3f4f6" : "#222",
-                        fontWeight: 500,
-                        display: "block",
-                        marginBottom: "0.5em"
-                      }}>
-                        Judul Event:
-                        <input
-                          type="text"
-                          value={form.summary}
-                          onChange={e => setForm({ ...form, summary: e.target.value })}
-                          required
-                          style={{
-                            marginTop: "8px",
-                            padding: "0.5em",
-                            borderRadius: "6px",
-                            border: "1px solid #6366f1",
-                            width: "100%",
-                            boxSizing: "border-box",
-                            color: theme === "dark" ? "#222" : "#222",
-                            background: theme === "dark" ? "#fff" : "#fff",
-                            fontSize: "1em"
-                          }}
-                        />
-                      </label>
-                    </div>
-                    <div style={{ marginBottom: "1em" }}>
-                      <label style={{ color: theme === "dark" ? "#f3f4f6" : "#222", fontWeight: 500, display: "block", marginBottom: "0.5em" }}>
-                        Mulai:
-                        <div style={{ display: "flex", gap: "0.7em" }}>
-                          <input
-                            type="date"
-                            value={form.startDate}
-                            onChange={e => setForm({ ...form, startDate: e.target.value })}
-                            required
-                            style={{
-                              padding: "0.5em",
-                              borderRadius: "6px",
-                              border: "1px solid #6366f1",
-                              fontSize: "1em",
-                              fontFamily: "inherit"
-                            }}
-                          />
-                          <select
-                            value={form.startTime.split(":")[0]}
-                            onChange={e => setForm({ ...form, startTime: e.target.value + ":" + form.startTime.split(":")[1] })}
-                            style={{ padding: "0.5em", borderRadius: "6px", border: "1px solid #6366f1", fontSize: "1em", fontFamily: "inherit" }}
-                          >
-                            {hours.map(h => <option key={h} value={h}>{h}</option>)}
-                          </select>
-                          <select
-                            value={form.startTime.split(":")[1]}
-                            onChange={e => setForm({ ...form, startTime: form.startTime.split(":")[0] + ":" + e.target.value })}
-                            style={{ padding: "0.5em", borderRadius: "6px", border: "1px solid #6366f1", fontSize: "1em", fontFamily: "inherit" }}
-                          >
-                            {minutes.map(m => <option key={m} value={m}>{m}</option>)}
-                          </select>
-                        </div>
-                      </label>
-                    </div>
-                    <div style={{ marginBottom: "1em" }}>
-                      <label style={{ color: theme === "dark" ? "#f3f4f6" : "#222", fontWeight: 500, display: "block", marginBottom: "0.5em" }}>
-                        Selesai:
-                        <div style={{ display: "flex", gap: "0.7em" }}>
-                          <input
-                            type="date"
-                            value={form.endDate}
-                            onChange={e => setForm({ ...form, endDate: e.target.value })}
-                            required
-                            style={{
-                              padding: "0.5em",
-                              borderRadius: "6px",
-                              border: "1px solid #6366f1",
-                              fontSize: "1em",
-                              fontFamily: "inherit"
-                            }}
-                          />
-                          <select
-                            value={form.endTime.split(":")[0]}
-                            onChange={e => setForm({ ...form, endTime: e.target.value + ":" + form.endTime.split(":")[1] })}
-                            style={{ padding: "0.5em", borderRadius: "6px", border: "1px solid #6366f1", fontSize: "1em", fontFamily: "inherit" }}
-                          >
-                            {hours.map(h => <option key={h} value={h}>{h}</option>)}
-                          </select>
-                          <select
-                            value={form.endTime.split(":")[1]}
-                            onChange={e => setForm({ ...form, endTime: form.endTime.split(":")[0] + ":" + e.target.value })}
-                            style={{ padding: "0.5em", borderRadius: "6px", border: "1px solid #6366f1", fontSize: "1em", fontFamily: "inherit" }}
-                          >
-                            {minutes.map(m => <option key={m} value={m}>{m}</option>)}
-                          </select>
-                        </div>
-                      </label>
-                    </div>
-                    <button
-                      type="submit"
-                      disabled={eventsLoading}
-                      style={{
-                        background: "#6366f1",
-                        color: "#fff",
-                        border: "none",
-                        borderRadius: "8px",
-                        padding: "0.7em 1.2em",
-                        fontWeight: 500,
-                        cursor: "pointer",
-                        marginRight: "8px",
-                        marginTop: "0.5em"
-                      }}
-                    >
-                      {editId === null ? "Tambah" : "Simpan"}
-                    </button>
-                    {editId !== null && (
-                      <button
-                        type="button"
-                        onClick={resetForm}
-                        style={{
-                          background: "#e0e7ff",
-                          color: "#6366f1",
-                          border: "1px solid #6366f1",
-                          borderRadius: "8px",
-                          padding: "0.7em 1.2em",
-                          fontWeight: 500,
-                          cursor: "pointer",
-                          marginTop: "0.5em"
-                        }}
-                      >
-                        Batal
-                      </button>
-                    )}
-                  </form>
-                  <div style={{ margin: "2em 0", maxWidth: 420, marginLeft: "auto", marginRight: "auto" }}>
-                    <h3 style={{ marginBottom: 10, color: theme === "dark" ? "#f3f4f6" : "#222" }}>Daftar Jadwal Tugas Akhir:</h3>
-                    {appEvents.length === 0 ? (
-                      <div style={{
-                        background: theme === "dark" ? "#23272f" : "#fff",
-                        color: theme === "dark" ? "#a1a1aa" : "#888",
-                        padding: "1.2em",
-                        borderRadius: "18px",
-                        textAlign: "center",
-                        boxShadow: theme === "dark"
-                          ? "0 4px 16px rgba(99,102,241,0.18)"
-                          : "0 4px 16px rgba(99,102,241,0.10)",
-                        marginTop: 10
-                      }}>
-                        Tidak ada jadwal tugas akhir
+              <button
+                style={{
+                  background: colorAccent,
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: "10px",
+                  padding: "0.9em 1.5em",
+                  fontWeight: 700,
+                  marginBottom: "1em",
+                  cursor: "pointer",
+                  display: "block",
+                  width: "100%",
+                  maxWidth: "320px",
+                  marginLeft: "auto",
+                  marginRight: "auto",
+                  boxShadow: "0 2px 8px rgba(99,102,241,0.08)",
+                  fontSize: "1.08em",
+                  transition: "background 0.2s",
+                }}
+                onClick={() => setShowEventForm(true)}
+              >
+                + Tambah Event
+              </button>
+              {showEventForm && (
+                <div style={{
+                  position: "fixed",
+                  top: 0,
+                  left: 0,
+                  width: "100vw",
+                  height: "100vh",
+                  background: theme === "dark" ? "rgba(0,0,0,0.52)" : "rgba(0,0,0,0.22)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  zIndex: 1000,
+                  backdropFilter: "blur(2px)",
+                  overflow: "auto"
+                }}>
+                  <div style={{
+                    background: colorCardBg,
+                    borderRadius: 20,
+                    boxShadow: "0 8px 32px rgba(99,102,241,0.18)",
+                    border: "2px solid #6366f1",
+                    padding: 24,
+                    minWidth: 0,
+                    maxWidth: "95vw",
+                    width: "100%",
+                    maxHeight: "90vh",
+                    color: theme === "dark" ? "#f3f4f6" : "#222",
+                    overflowY: "auto",
+                    display: "flex",
+                    flexDirection: "column",
+                    justifyContent: "flex-start",
+                  }}>
+                    <h2 style={{ color: colorAccent, fontWeight: 800, fontSize: "1.25rem", marginBottom: 18, textAlign: "center", letterSpacing: "0.03em" }}>
+                      Tambah Event Baru
+                    </h2>
+                    <form onSubmit={addEvent}>
+                      <div style={{ marginBottom: 18 }}>
+                        <label style={{ fontWeight: 600 }}>Judul Event:</label>
+                        <input type="text" value={form.summary} onChange={e => setForm({ ...form, summary: e.target.value })} required style={{ width: "100%", padding: "0.7em", borderRadius: 8, border: "1.5px solid #6366f1", marginBottom: 10, background: theme === "dark" ? "#18181b" : "#fff", color: theme === "dark" ? "#f3f4f6" : "#222", fontWeight: 500, fontSize: "1em" }} />
                       </div>
-                    ) : (
-                      <ul style={{ listStyle: "none", padding: 0 }}>
-                        {appEvents.map(ev => (
-                          <li key={ev.id}
-                              style={{
-                                background: theme === "dark" ? "#23272f" : "#fff",
-                                borderRadius: "18px",
-                                marginBottom: "1.2em",
-                                padding: "1.2em",
-                                boxShadow: theme === "dark"
-                                  ? "0 4px 16px rgba(99,102,241,0.18)"
-                                  : "0 4px 16px rgba(99,102,241,0.10)",
-                                color: theme === "dark" ? "#f3f4f6" : "#222",
-                                border: "1px solid " + (theme === "dark" ? "#353a47" : "#e0e7ff"),
-                                transition: "box-shadow 0.2s, background 0.2s, transform 0.2s"
-                              }}
-                              onMouseOver={e => {
-                                e.currentTarget.style.background = theme === "dark" ? "#353a47" : "#e0e7ff";
-                                e.currentTarget.style.boxShadow = "0 8px 32px rgba(99,102,241,0.18)";
-                                e.currentTarget.style.transform = "scale(1.03)";
-                              }}
-                              onMouseOut={e => {
-                                e.currentTarget.style.background = theme === "dark" ? "#23272f" : "#fff";
-                                e.currentTarget.style.boxShadow = theme === "dark"
-                                  ? "0 4px 16px rgba(99,102,241,0.18)"
-                                  : "0 4px 16px rgba(99,102,241,0.10)";
-                                e.currentTarget.style.transform = "none";
-                              }}
+                      <div style={{ marginBottom: 18 }}>
+                        <label style={{ fontWeight: 600 }}>Deskripsi Event:</label>
+                        <textarea value={eventDesc} onChange={e => setEventDesc(e.target.value)} rows={3} style={{ width: "100%", padding: "0.7em", borderRadius: 8, border: "1.5px solid #6366f1", marginBottom: 10, background: theme === "dark" ? "#18181b" : "#fff", color: theme === "dark" ? "#f3f4f6" : "#222", fontWeight: 500, fontSize: "1em" }} />
+                      </div>
+                      <div style={{ marginBottom: 18 }}>
+                        <label style={{ fontWeight: 600 }}>Kategori/Jenis Event:</label>
+                        <select
+                          value={kategori}
+                          onChange={e => setKategori(e.target.value)}
+                          style={{ width: "100%", padding: "0.7em", borderRadius: 8, border: `1.5px solid ${kategoriList.find(k=>k.name===kategori)?.color||'#6366f1'}`, marginBottom: 10, background: theme === "dark" ? "#18181b" : "#fff", color: theme === "dark" ? "#f3f4f6" : "#222", fontWeight: 500, fontSize: "1em" }}
+                        >
+                          <option value="">Pilih kategori...</option>
+                          {kategoriList.map(k => (
+                            <option key={k.name} value={k.name} style={{ color: k.color }}>{k.name}</option>
+                          ))}
+                        </select>
+                        <div style={{ marginTop: 8 }}>
+                          <input
+                            type="text"
+                            value={newKategori}
+                            onChange={e => setNewKategori(e.target.value)}
+                            placeholder="Tambah kategori baru..."
+                            style={{ width: "60%", padding: "0.5em", borderRadius: 8, border: "1px solid #6366f1", marginRight: 8, background: theme === "dark" ? "#18181b" : "#fff", color: theme === "dark" ? "#f3f4f6" : "#222", fontWeight: 500, fontSize: "0.98em" }}
+                          />
+                          <input
+                            type="color"
+                            value={newKategoriColor}
+                            onChange={e => setNewKategoriColor(e.target.value)}
+                            style={{ width: 32, height: 32, verticalAlign: "middle", marginRight: 8, border: "none", background: "none" }}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (newKategori.trim() && !kategoriList.some(k => k.name === newKategori.trim())) {
+                                const updated = [...kategoriList, { name: newKategori.trim(), color: newKategoriColor }];
+                                setKategoriList(updated);
+                                setKategori(newKategori.trim());
+                                setNewKategori("");
+                                setNewKategoriColor("#6366f1");
+                                // Persist to localStorage
+                                if (typeof window !== "undefined") {
+                                  localStorage.setItem("kategoriList", JSON.stringify(updated));
+                                }
+                              }
+                            }}
+                            style={{ padding: "0.5em 1em", borderRadius: 8, background: newKategoriColor, color: "#fff", fontWeight: 600, border: "none", cursor: "pointer", fontSize: "0.98em" }}
                           >
-                            <div>
-                              <span style={{ fontWeight: "bold" }}>{ev.summary}</span>
-                            </div>
-                            <div style={{ color: theme === "dark" ? "#a1a1aa" : "#555", fontSize: "0.98em" }}>
-                              {ev.start?.dateTime ? formatDateTime24(ev.start.dateTime) : ev.start?.date}
-                              {" - "}
-                              {ev.end?.dateTime ? formatDateTime24(ev.end.dateTime) : ev.end?.date}
-                            </div>
-                            <div style={{ marginTop: "0.8em", display: "flex", gap: "0.5em" }}>
-                              <button
-                                onClick={() => startEdit(ev)}
-                                style={{
-                                  background: "#6366f1",
-                                  color: "#fff",
-                                  border: "none",
-                                  borderRadius: "6px",
-                                  padding: "0.4em 1em",
-                                  fontWeight: 500,
-                                  cursor: "pointer",
-                                }}
-                              >
-                                Edit
-                              </button>
-                              <button
-                                onClick={() => deleteEvent(ev.id)}
-                                style={{
-                                  background: "#ef4444",
-                                  color: "#fff",
-                                  border: "none",
-                                  borderRadius: "6px",
-                                  padding: "0.4em 1em",
-                                  fontWeight: 500,
-                                  cursor: "pointer",
-                                }}
-                              >
-                                Hapus
-                              </button>
-                            </div>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
+                            Tambah
+                          </button>
+                        </div>
+                      </div>
+                      <div style={{ marginBottom: 18 }}>
+                        <label style={{ fontWeight: 600 }}>Tamu/Undangan (email, pisahkan dengan koma):</label>
+                        <input type="text" value={attendees.join(", ")} onChange={e => setAttendees(e.target.value.split(",").map(s => s.trim()))} placeholder="email1@gmail.com, email2@gmail.com" style={{ width: "100%", padding: "0.7em", borderRadius: 8, border: "1.5px solid #6366f1", marginBottom: 10, background: theme === "dark" ? "#18181b" : "#fff", color: theme === "dark" ? "#f3f4f6" : "#222", fontWeight: 500, fontSize: "1em" }} />
+                      </div>
+                      <div style={{ marginBottom: 18 }}>
+                        <label style={{ fontWeight: 600 }}>Repeat/Recurrence:</label>
+                        <select value={recurrence} onChange={e => setRecurrence(e.target.value)} style={{ width: "100%", padding: "0.7em", borderRadius: 8, border: "1.5px solid #6366f1", marginBottom: 10, background: theme === "dark" ? "#18181b" : "#fff", color: theme === "dark" ? "#f3f4f6" : "#222", fontWeight: 500, fontSize: "1em" }}>
+                          <option value="">Tidak berulang</option>
+                          <option value="RRULE:FREQ=DAILY">Harian</option>
+                          <option value="RRULE:FREQ=WEEKLY">Mingguan</option>
+                          <option value="RRULE:FREQ=MONTHLY">Bulanan</option>
+                        </select>
+                      </div>
+                      <div style={{ marginBottom: 18 }}>
+                        <label style={{ fontWeight: 600 }}>Pengingat (Reminder):</label>
+                        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                          {[5, 15, 60, 1440].map(m => (
+                            <label key={m} style={{ fontWeight: 500 }}>
+                              <input type="checkbox" checked={reminders.includes(m)} onChange={e => {
+                                if (e.target.checked) setReminders([...reminders, m]);
+                                else setReminders(reminders.filter(x => x !== m));
+                              }} /> {m === 1440 ? "1 hari" : `${m} menit`}
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                      <div style={{ marginBottom: 18 }}>
+                        <label style={{ fontWeight: 600 }}>Mulai:</label>
+                        <div style={{ display: "flex", gap: "0.7em" }}>
+                          <input type="date" value={form.startDate} onChange={e => setForm({ ...form, startDate: e.target.value })} required style={{ padding: "0.5em", borderRadius: "6px", border: "1px solid #6366f1", fontSize: "1em", fontFamily: "inherit" }} />
+                          <select value={form.startTime.split(":")[0]} onChange={e => setForm({ ...form, startTime: e.target.value + ":" + form.startTime.split(":")[1] })} style={{ padding: "0.5em", borderRadius: "6px", border: "1px solid #6366f1", fontSize: "1em", fontFamily: "inherit" }}>
+                            {hours.map(h => <option key={h} value={h}>{h}</option>)}
+                          </select>
+                          <select value={form.startTime.split(":")[1]} onChange={e => setForm({ ...form, startTime: form.startTime.split(":")[0] + ":" + e.target.value })} style={{ padding: "0.5em", borderRadius: "6px", border: "1px solid #6366f1", fontSize: "1em", fontFamily: "inherit" }}>
+                            {minutes.map(m => <option key={m} value={m}>{m}</option>)}
+                          </select>
+                        </div>
+                      </div>
+                      <div style={{ marginBottom: 18 }}>
+                        <label style={{ fontWeight: 600 }}>Selesai:</label>
+                        <div style={{ display: "flex", gap: "0.7em" }}>
+                          <input type="date" value={form.endDate} onChange={e => setForm({ ...form, endDate: e.target.value })} required style={{ padding: "0.5em", borderRadius: "6px", border: "1px solid #6366f1", fontSize: "1em", fontFamily: "inherit" }} />
+                          <select value={form.endTime.split(":")[0]} onChange={e => setForm({ ...form, endTime: e.target.value + ":" + form.endTime.split(":")[1] })} style={{ padding: "0.5em", borderRadius: "6px", border: "1px solid #6366f1", fontSize: "1em", fontFamily: "inherit" }}>
+                            {hours.map(h => <option key={h} value={h}>{h}</option>)}
+                          </select>
+                          <select value={form.endTime.split(":")[1]} onChange={e => setForm({ ...form, endTime: form.endTime.split(":")[0] + ":" + e.target.value })} style={{ padding: "0.5em", borderRadius: "6px", border: "1px solid #6366f1", fontSize: "1em", fontFamily: "inherit" }}>
+                            {minutes.map(m => <option key={m} value={m}>{m}</option>)}
+                          </select>
+                        </div>
+                      </div>
+                      <div style={{ display: "flex", gap: 12 }}>
+                        <button type="button" onClick={() => setShowEventForm(false)} style={{ background: colorAccent, color: "#fff", padding: "0.85em 1.5em", borderRadius: 10, fontWeight: 700, flex: 1, border: "none", cursor: "pointer", fontSize: "1.08em" }}>Batal</button>
+                        <button type="submit" disabled={eventsLoading} style={{ background: colorAccent, color: "#fff", padding: "0.85em 1.5em", borderRadius: 10, fontWeight: 700, flex: 1, border: "none", cursor: "pointer", fontSize: "1.08em" }}>{eventsLoading ? "Menyimpan..." : "Simpan"}</button>
+                      </div>
+                    </form>
                   </div>
-                  <iframe
-                    key={calendarKey}
-                    src={
-                      userEmail
-                        ? `https://calendar.google.com/calendar/embed?src=${encodeURIComponent(
-                            userEmail
-                          )}&rand=${calendarKey}`
-                        : "https://calendar.google.com/calendar/embed?src=YOUR_EMAIL%40gmail.com"
-                    }
-                    style={{
-                      border: "2px solid " + (theme === "dark" ? "#353a47" : "#e0e7ff"),
-                      background: theme === "dark" ? "#23272f" : "#fff",
-                      width: "100%",
-                      height: "600px",
-                      borderRadius: "14px",
-                      boxShadow: "0 2px 8px rgba(99,102,241,0.06)",
-                      filter: theme === "dark" ? "brightness(0.92)" : "none"
-                    }}
-                    frameBorder={0}
-                  ></iframe>
-                  <p
-                    style={{
-                      fontSize: "0.9em",
-                      color: theme === "dark" ? "#888" : "#888",
-                      marginTop: "1em",
-                      textAlign: "center",
-                    }}
-                  >
-                    {userEmail
-                      ? (
-                        <>Ini adalah kalender kamu (<b>{userEmail}</b>).</>
-                      )
-                      : (
-                        <>Ganti <b>YOUR_EMAIL%40gmail.com</b> dengan email Google kamu (pakai %40 untuk @).</>
-                      )
-                    }
-                  </p>
                 </div>
               )}
+              <div style={{ margin: "2em 0", maxWidth: 420, marginLeft: "auto", marginRight: "auto" }}>
+                <h3 style={{ marginBottom: 10, color: theme === "dark" ? "#f3f4f6" : "#222" }}>Daftar Jadwal Tugas Akhir:</h3>
+                <ul>
+                  {appEvents.map(ev => (
+                    <li key={ev.id} style={{ marginBottom: "1em", background: colorCardBg, borderRadius: 10, boxShadow: "0 2px 8px rgba(99,102,241,0.08)", padding: "1em" }}>
+                      <div style={{ display: "flex", flexDirection: "column", gap: "0.5em" }}>
+                        <div style={{ fontWeight: 700, color: colorAccent }}>{ev.summary}</div>
+                        <div style={{ fontSize: "0.98em" }}>{ev.description?.replace("__FROM_APP__", "")}</div>
+                        <div style={{ fontSize: "0.95em", color: theme === "dark" ? colorAccentLight : colorAccentSoft }}>
+                          {formatDateTime24(ev.start?.dateTime)} - {formatDateTime24(ev.end?.dateTime)}
+                        </div>
+                        <div style={{ display: "flex", gap: "0.7em" }}>
+                          <button
+                            onClick={() => startEdit(ev)}
+                            style={{
+                              background: "#6366f1",
+                              color: "#fff",
+                              border: "none",
+                              borderRadius: "6px",
+                              padding: "0.4em 1em",
+                              fontWeight: 500,
+                              cursor: "pointer",
+                            }}
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => deleteEvent(ev.id)}
+                            style={{
+                              background: "#ef4444",
+                              color: "#fff",
+                              border: "none",
+                              borderRadius: "6px",
+                              padding: "0.4em 1em",
+                              fontWeight: 500,
+                              cursor: "pointer",
+                            }}
+                          >
+                            Hapus
+                          </button>
+                        </div>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <iframe
+                key={calendarKey}
+                src={
+                  userEmail
+                    ? `https://calendar.google.com/calendar/embed?src=${encodeURIComponent(
+                        userEmail
+                      )}&rand=${calendarKey}`
+                    : "https://calendar.google.com/calendar/embed?src=YOUR_EMAIL%40gmail.com"
+                }
+                style={{
+                  border: "2px solid " + (theme === "dark" ? "#353a47" : "#e0e7ff"),
+                  background: theme === "dark" ? "#23272f" : "#fff",
+                  width: "100%",
+                  height: "600px",
+                  borderRadius: "14px",
+                  boxShadow: "0 2px 8px rgba(99,102,241,0.06)",
+                  filter: theme === "dark" ? "brightness(0.92)" : "none"
+                }}
+                frameBorder={0}
+              ></iframe>
+              <p
+                style={{
+                  fontSize: "0.9em",
+                  color: theme === "dark" ? "#888" : "#888",
+                  marginTop: "1em",
+                  textAlign: "center",
+                }}
+              >
+                {userEmail
+                  ? (
+                    <>Ini adalah kalender kamu (<b>{userEmail}</b>).</>
+                  )
+                  : (
+                    <>Ganti <b>YOUR_EMAIL%40gmail.com</b> dengan email Google kamu (pakai %40 untuk @).</>
+                  )
+                }
+              </p>
             </div>
           )}
         </div>

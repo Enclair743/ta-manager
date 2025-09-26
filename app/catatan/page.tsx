@@ -33,12 +33,73 @@ type Catatan = {
   tanggal: string;
   url: string;
   user: string;
+  jenis?: string;
 };
 
 export default function CatatanPage() {
+  // State untuk tab jenis catatan
+  const [jenisTab, setJenisTab] = useState<'asistensi'|'biasa'>('asistensi');
+  // Fungsi hapus catatan
+  async function handleDeleteCatatan(id: string) {
+    if (!window.confirm("Yakin ingin menghapus catatan ini dari Notion?")) return;
+    setLoading(true);
+    try {
+      const res = await fetch("/api/notion-delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pageId: id }),
+      });
+      if (!res.ok) {
+        alert("Gagal menghapus catatan dari Notion.");
+      } else {
+        // Refresh data setelah hapus
+        await fetch("/api/save-catatan", { method: "POST" });
+        const catatanRes = await fetch("/catatan.json");
+        const data = await catatanRes.json();
+        const mapped = (data.pages || [])
+          .filter((item) => {
+            const userVal = item.user ?? item.User ?? "";
+            return userVal === user?.email;
+          })
+          .map((item) => ({
+            id: item.id,
+            title: item.title ?? item.Nama ?? "",
+            tanggal: item.tanggal ?? item.Tanggal ?? "",
+            url: item.url ?? item.Link ?? "",
+            user: item.user ?? item.User ?? "",
+            jenis:
+              (Array.isArray(item.jenis) && item.jenis[0]?.text?.content)
+              || (Array.isArray(item.Jenis) && item.Jenis[0]?.text?.content)
+              || (typeof item.jenis === "string" ? item.jenis : undefined)
+              || (typeof item.Jenis === "string" ? item.Jenis : undefined)
+              || "asistensi",
+          }));
+        setCatatanList(mapped);
+      }
+    } catch (err) {
+      alert("Terjadi error saat menghapus catatan.");
+    }
+    setLoading(false);
+  }
   // Theme state
   const [theme, setTheme] = useState("dark");
   const colors = useThemeColors(theme);
+  // Style mirip page penulisan
+  const cardStyle = {
+    background: theme === "dark"
+      ? "rgba(36, 41, 54, 0.82)"
+      : "rgba(255,255,255,0.96)",
+    borderRadius: "18px",
+    boxShadow: theme === "dark"
+      ? "0 8px 32px rgba(99,102,241,0.18)"
+      : "0 8px 32px rgba(99,102,241,0.10)",
+    padding: "1.7em 2em",
+    marginBottom: "2em",
+    color: theme === "dark" ? "#f3f4f6" : "#222",
+    border: theme === "dark" ? "1.5px solid #353a47" : "1.5px solid #e0e7ff",
+    backdropFilter: "blur(8px)",
+    WebkitBackdropFilter: "blur(8px)",
+  };
 
   // Ambil user dari context
   const { user, loading: authLoading } = useAuth();
@@ -46,6 +107,7 @@ export default function CatatanPage() {
   const [catatanList, setCatatanList] = useState<Catatan[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ title: "", tanggal: "" });
+  const [formJenis, setFormJenis] = useState<'asistensi'|'biasa'>('asistensi');
   const [searchTitle, setSearchTitle] = useState("");
   const [searchDateStart, setSearchDateStart] = useState("");
   const [searchDateEnd, setSearchDateEnd] = useState("");
@@ -78,6 +140,12 @@ export default function CatatanPage() {
             tanggal: item.tanggal ?? item.Tanggal ?? "",
             url: item.url ?? item.Link ?? "",
             user: item.user ?? item.User ?? "",
+            jenis:
+              (Array.isArray(item.jenis) && item.jenis[0]?.text?.content)
+              || (Array.isArray(item.Jenis) && item.Jenis[0]?.text?.content)
+              || (typeof item.jenis === "string" ? item.jenis : undefined)
+              || (typeof item.Jenis === "string" ? item.Jenis : undefined)
+              || "asistensi",
           }));
         setCatatanList(mapped);
       } catch (err) {
@@ -106,11 +174,13 @@ export default function CatatanPage() {
         title: titleToSend,
         userId: user.email,
         tanggal: tanggalToSend,
+        jenis: formJenis,
       }),
     })
       .then((res) => res.json())
       .then(() => {
         setForm({ title: "", tanggal: "" });
+        setFormJenis(jenisTab);
         setShowForm(false);
         fetch("/api/save-catatan", { method: "POST" })
           .then(() => fetch("/catatan.json"))
@@ -127,6 +197,12 @@ export default function CatatanPage() {
                 tanggal: item.tanggal ?? item.Tanggal ?? "",
                 url: item.url ?? item.Link ?? "",
                 user: item.user ?? item.User ?? "",
+                jenis:
+                  (Array.isArray(item.jenis) && item.jenis[0]?.text?.content)
+                  || (Array.isArray(item.Jenis) && item.Jenis[0]?.text?.content)
+                  || (typeof item.jenis === "string" ? item.jenis : undefined)
+                  || (typeof item.Jenis === "string" ? item.Jenis : undefined)
+                  || "asistensi",
               }));
             setCatatanList(mapped);
           });
@@ -137,7 +213,10 @@ export default function CatatanPage() {
   // Filter hanya catatan milik user yang login
   const userEmail = user && typeof user.email === "string" ? user.email : "";
   const filteredCatatan = catatanList
-    .filter((c: Catatan) => c.user === userEmail)
+    .filter((c: Catatan) => {
+      const jenisVal = (c.jenis ?? "asistensi").toLowerCase().trim();
+      return c.user === userEmail && jenisVal === jenisTab;
+    })
     .filter(
       (c: Catatan) =>
         (searchTitle === "" ||
@@ -163,55 +242,23 @@ export default function CatatanPage() {
     );
 
   return (
-    <div
-      style={{
-        maxWidth: 700,
-        margin: "2rem auto",
-        padding: 28,
-        background: colors.gradientBg,
-        borderRadius: 24,
-        boxShadow: colors.glassShadow,
-        color: colors.text,
-        border: colors.glassBorder,
-        fontFamily: "'Montserrat', 'Poppins', 'Segoe UI', Arial, sans-serif",
-        fontSize: "1em",
-        position: "relative",
-        transition: "background 0.2s",
-        overflow: "hidden",
-      }}
-    >
+    <div style={{ padding: "0 1.5em", maxWidth: "800px", margin: "0 auto", width: "100%" }}>
       <h1
         style={{
           fontSize: "2.2em",
           fontWeight: 900,
-          marginBottom: 38,
-          color: colors.accent,
-          background: theme === "dark"
-            ? "linear-gradient(90deg,#a5b4fc,#7c3aed)"
-            : "linear-gradient(90deg,#7c3aed,#a5b4fc)",
-          backgroundClip: "text",
-          WebkitBackgroundClip: "text",
-          WebkitTextFillColor: "transparent",
-          letterSpacing: "0.04em",
-          fontFamily:
-            "'Montserrat', 'Poppins', 'Inter', 'Segoe UI', Arial, sans-serif",
+          margin: "2.5rem 0 1.5rem 0",
+          color: colors.text,
           textAlign: "center",
-          textShadow: theme === "dark"
-            ? "0 2px 8px #292944"
-            : "0 2px 8px #c4b5fd",
+          letterSpacing: "0.04em",
+          fontFamily: "'Montserrat', 'Poppins', 'Segoe UI', Arial, sans-serif",
         }}
       >
         Catatan Asistensi
       </h1>
+      {/* Tombol tambah catatan */}
       <div
-        style={{
-          marginBottom: 28,
-          background: colors.cardBg,
-          borderRadius: 16,
-          boxShadow: colors.cardShadow,
-          border: `2px solid ${colors.cardBorder}`,
-          padding: "18px 18px 10px 18px",
-        }}
+        style={{ ...cardStyle, marginBottom: 28, padding: "1.2em 1.2em 0.7em 1.2em" }}
       >
         <input
           type="text"
@@ -219,17 +266,19 @@ export default function CatatanPage() {
           onChange={(e) => setSearchTitle(e.target.value)}
           placeholder="Cari judul catatan..."
           style={{
-            width: "100%",
-            padding: "0.85em",
-            borderRadius: 10,
-            border: `2px solid ${colors.border}`,
-            marginBottom: 15,
+            width: "calc(100% - 2px)",
+            padding: "0.5em 0.8em",
+            borderRadius: 8,
+            border: `1.5px solid ${colors.border}`,
+            marginBottom: 10,
             background: colors.inputBg,
             color: colors.text,
             fontWeight: 500,
-            fontSize: "1.07em",
-            boxShadow: "0 1px 4px rgba(124,58,237,0.08)",
+            fontSize: "1em",
+            boxShadow: "0 1px 2px rgba(124,58,237,0.06)",
             outline: "none",
+            transition: "border 0.2s, box-shadow 0.2s",
+            boxSizing: "border-box",
           }}
         />
         <div style={{ display: "flex", gap: 14, marginBottom: 14 }}>
@@ -285,6 +334,45 @@ export default function CatatanPage() {
         >
           {showForm ? "Tutup Form" : "+ Catatan Baru"}
         </button>
+      {/* Tab switch jenis catatan (pindah ke bawah tombol tambah catatan) */}
+      <div style={{ display: "flex", justifyContent: "center", gap: 16, margin: "24px 0 18px 0" }}>
+        <button
+          type="button"
+          onClick={() => { setJenisTab('biasa'); setFormJenis('biasa'); }}
+          style={{
+            background: jenisTab === 'biasa' ? colors.accent : colors.cardBg,
+            color: jenisTab === 'biasa' ? '#fff' : colors.text,
+            border: `2px solid ${colors.accent}`,
+            borderRadius: 10,
+            fontWeight: 700,
+            padding: '0.7em 1.5em',
+            fontSize: '1.08em',
+            cursor: 'pointer',
+            boxShadow: jenisTab === 'biasa' ? colors.glassShadow : 'none',
+            transition: 'background 0.2s, color 0.2s',
+          }}
+        >
+          Catatan Biasa
+        </button>
+        <button
+          type="button"
+          onClick={() => { setJenisTab('asistensi'); setFormJenis('asistensi'); }}
+          style={{
+            background: jenisTab === 'asistensi' ? colors.accent : colors.cardBg,
+            color: jenisTab === 'asistensi' ? '#fff' : colors.text,
+            border: `2px solid ${colors.accent}`,
+            borderRadius: 10,
+            fontWeight: 700,
+            padding: '0.7em 1.5em',
+            fontSize: '1.08em',
+            cursor: 'pointer',
+            boxShadow: jenisTab === 'asistensi' ? colors.glassShadow : 'none',
+            transition: 'background 0.2s, color 0.2s',
+          }}
+        >
+          Catatan Asistensi
+        </button>
+      </div>
       </div>
       {showForm && (
         <div
@@ -331,6 +419,27 @@ export default function CatatanPage() {
               Tambah Catatan Baru
             </h2>
             <form onSubmit={handleSubmit}>
+              {/* Pilihan jenis catatan */}
+              <div style={{ marginBottom: 18 }}>
+                <label style={{ fontWeight: 600, marginRight: 12 }}>Jenis Catatan:</label>
+                <select
+                  value={formJenis}
+                  onChange={e => setFormJenis(e.target.value as 'asistensi'|'biasa')}
+                  style={{
+                    padding: '0.5em 1em',
+                    borderRadius: 8,
+                    border: `2px solid ${colors.border}`,
+                    background: colors.inputBg,
+                    color: colors.text,
+                    fontWeight: 500,
+                    fontSize: '1em',
+                    outline: 'none',
+                  }}
+                >
+                  <option value="asistensi">Catatan Asistensi</option>
+                  <option value="biasa">Catatan Biasa</option>
+                </select>
+              </div>
               <input
                 type="text"
                 value={form.title}
@@ -411,21 +520,7 @@ export default function CatatanPage() {
         </div>
       )}
       {filteredCatatan.length === 0 ? (
-        <div
-          style={{
-            color: colors.danger,
-            fontWeight: 700,
-            marginTop: 36,
-            textAlign: "center",
-            fontSize: "1.12em",
-            letterSpacing: "0.02em",
-            background: colors.cardBg,
-            borderRadius: 12,
-            padding: "1em 0.6em",
-            boxShadow: colors.cardShadow,
-            border: `2px solid ${colors.cardBorder}`,
-          }}
-        >
+        <div style={{ ...cardStyle, color: colors.danger, fontWeight: 700, textAlign: "center", fontSize: "1.12em", letterSpacing: "0.02em" }}>
           Tidak ada catatan milik Anda.
         </div>
       ) : (
@@ -435,27 +530,25 @@ export default function CatatanPage() {
               key={c.id}
               className="catatan-card"
               style={{
-                background: colors.cardBg,
-                marginBottom: 22,
-                borderRadius: 14,
+                ...cardStyle,
                 padding: "1.1em 1.4em",
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                boxShadow: colors.cardShadow,
-                border: `2px solid ${colors.cardBorder}`,
-                color: colors.text,
-                transition: "background 0.2s, color 0.2s",
+                marginBottom: "1.2em",
                 fontWeight: 500,
+                boxShadow: theme === "dark"
+                  ? "0 2px 8px 0 rgba(0,0,0,0.25)"
+                  : "0 2px 8px 0 rgba(0,0,0,0.08)",
+                border: theme === "dark" ? "1.5px solid #353a47" : "1.5px solid #e0e7ff",
+                display: "block",
               }}
             >
-              <div style={{ display: "flex", flexDirection: "column" }}>
+              <div style={{ marginBottom: "0.7em" }}>
                 <span
                   style={{
                     fontWeight: 700,
                     color: colors.accent,
-                    fontSize: "1.09em",
+                    fontSize: "1.15em",
                     marginBottom: 2,
+                    display: "block",
                   }}
                 >
                   {c.title}
@@ -464,53 +557,91 @@ export default function CatatanPage() {
                   <span
                     style={{
                       color: theme === "dark" ? "#a5b4fc" : "#555",
-                      fontSize: 13,
+                      fontSize: "0.98em",
                       marginTop: 2,
+                      display: "block",
                     }}
                   >
                     ({c.tanggal})
                   </span>
                 )}
               </div>
-              <a
-                href={c.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{
-                  color: colors.success,
-                  textDecoration: "underline",
-                  fontWeight: 700,
-                  fontSize: "1.02em",
-                  padding: "6px 14px",
-                  borderRadius: 8,
-                  background: theme === "dark"
-                    ? "rgba(34,197,94,0.08)"
-                    : "rgba(34,197,94,0.12)",
-                  boxShadow: "0 1px 5px rgba(34,197,94,0.09)",
-                  border: `1.5px solid ${colors.success}`,
-                }}
-              >
-                Buka di Notion
-              </a>
+              <div style={{ display: "flex", gap: "0.7em", marginTop: "0.5em" }}>
+                <a
+                  href={c.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    background: colors.success,
+                    color: "#fff",
+                    border: "none",
+                    borderRadius: "8px",
+                    padding: "0.7em 1.2em",
+                    fontWeight: 700,
+                    fontSize: "1em",
+                    cursor: "pointer",
+                    boxShadow: "0 2px 8px rgba(34,197,94,0.10)",
+                    textDecoration: "none",
+                    transition: "background 0.2s, color 0.2s",
+                    display: "inline-block",
+                    flex: 1,
+                  }}
+                >
+                  Buka di Notion
+                </a>
+                <button
+                  onClick={() => handleDeleteCatatan(c.id)}
+                  style={{
+                    background: colors.danger,
+                    color: "#fff",
+                    border: "none",
+                    borderRadius: "8px",
+                    padding: "0.7em 1.2em",
+                    fontWeight: 700,
+                    fontSize: "1em",
+                    cursor: "pointer",
+                    boxShadow: "0 2px 8px rgba(239,68,68,0.10)",
+                    transition: "background 0.2s, color 0.2s",
+                    display: "inline-block",
+                    flex: 1,
+                  }}
+                  title="Hapus catatan dari Notion"
+                >
+                  Hapus
+                </button>
+              </div>
             </li>
           ))}
         </ul>
       )}
       <style>{`
         @media (max-width: 600px) {
-          div[style*='max-width: 700px'] {
-            padding: 10px !important;
-            font-size: 0.93em !important;
+          div[style*='max-width: 800px'] {
+            padding: 0.5em !important;
+            font-size: 0.95em !important;
           }
           .catatan-card {
-            padding: 1em 1em !important;
-            font-size: 1em !important;
+            padding: 0.7em 0.7em !important;
+            font-size: 0.98em !important;
             flex-direction: column !important;
-            gap: 8px !important;
+            gap: 6px !important;
+            margin-bottom: 0.8em !important;
           }
-          .catatan-card a {
-            padding: 7px 12px !important;
+          .catatan-card a, .catatan-card button {
+            padding: 0.7em 1em !important;
+            font-size: 0.98em !important;
+            width: 100%;
+            margin: 0.2em 0 !important;
+            box-sizing: border-box;
+          }
+          input[type="text"], input[type="date"] {
+            padding: 0.5em 0.7em !important;
+            font-size: 0.98em !important;
+          }
+          button {
+            width: 100%;
             font-size: 1em !important;
+            margin-top: 0.5em !important;
           }
         }
         ::placeholder {

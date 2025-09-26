@@ -41,7 +41,11 @@ async function fetchNotionPages() {
       title: props.Nama?.title?.[0]?.text?.content || "",
       user: props.User?.rich_text?.[0]?.text?.content || "",
       tanggal: props.Tanggal?.date?.start || "",
-      url: props.Link?.url || ""
+      url: props.Link?.url || "",
+      jenis:
+        props.Jenis?.rich_text?.[0]?.text?.content
+        ?? (typeof props.Jenis === "string" ? props.Jenis : undefined)
+        ?? "asistensi"
     };
   });
 }
