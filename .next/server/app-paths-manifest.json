@@ -1,8 +1,8 @@
 {
-  "/_not-found/page": "app/_not-found/page.js",
   "/login/page": "app/login/page.js",
-  "/penulisan/page": "app/penulisan/page.js",
   "/dashboard/page": "app/dashboard/page.js",
+  "/panduan/page": "app/panduan/page.js",
   "/catatan/page": "app/catatan/page.js",
-  "/kalender/page": "app/kalender/page.js"
+  "/penulisan/page": "app/penulisan/page.js",
+  "/referensi/page": "app/referensi/page.js"
 }

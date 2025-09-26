@@ -20,6 +20,11 @@
       "static/chunks/main-app.js",
       "static/chunks/app/dashboard/page.js"
     ],
+    "/panduan/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/panduan/page.js"
+    ],
     "/penulisan/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
@@ -35,10 +40,10 @@
       "static/chunks/main-app.js",
       "static/chunks/app/kalender/page.js"
     ],
-    "/_not-found/page": [
+    "/referensi/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/_not-found/page.js"
+      "static/chunks/app/referensi/page.js"
     ]
   }
 }
