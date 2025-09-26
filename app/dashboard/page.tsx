@@ -7,11 +7,16 @@ import { useRouter } from "next/navigation";
 import { useAuthCalendar } from "../../src/context/AuthCalendarContext";
 
 export default function DashboardPage() {
+  // State tab checklist
+  const [checklistTab, setChecklistTab] = useState<'penulisan'|'tugas'|'berkas'>('penulisan');
+  const [berkasTab, setBerkasTab] = useState<'seminar'|'proposal'|null>(null);
   const authCalendar = useAuthCalendar();
   if (!authCalendar) return <div>Gagal mendapatkan context. Silakan reload halaman.</div>;
   const { user, calendarToken } = authCalendar;
 
   const [theme, setTheme] = useState<"dark" | "light">("dark");
+    // State untuk toggle checklist
+    const [showChecklist, setShowChecklist] = useState(false);
   const [judul, setJudul] = useState("Judul Tugas Akhir");
   const [pembimbing1, setPembimbing1] = useState("");
   const [pembimbing2, setPembimbing2] = useState("");
@@ -667,14 +672,21 @@ export default function DashboardPage() {
         </div>
 
         {/* Checklist Section */}
-        <div style={{ ...sectionStyle }} data-section-style className="checklist-section">
-          <h2 style={{ fontSize: "1.32em", fontWeight: 800, marginBottom: "1.1em" }}>Checklist Belum Selesai</h2>
-          <div style={{ marginBottom: "1.5em" }}>
-            <h3 style={{ fontSize: "1.09em", fontWeight: 700, marginBottom: "0.6em" }}>📝 Penulisan</h3>
+        {/* Tombol Toggle Checklist */}
+        {/* Checklist Tab Buttons */}
+        <div style={{ textAlign: "center", margin: "1.2em 0 1em 0", display: "flex", justifyContent: "center", gap: "1em", flexWrap: "wrap" }}>
+          <button style={{ ...buttonPrimary, background: checklistTab==='penulisan'?colorAccent:'#353a47', color: checklistTab==='penulisan'?"#fff":colorAccent, borderRadius: "10px" }} onClick={()=>{setChecklistTab('penulisan'); setBerkasTab(null);}}>Checklist Penulisan</button>
+          <button style={{ ...buttonPrimary, background: checklistTab==='tugas'?colorAccent:'#353a47', color: checklistTab==='tugas'?"#fff":colorAccent, borderRadius: "10px" }} onClick={()=>{setChecklistTab('tugas'); setBerkasTab(null);}}>Checklist Tugas</button>
+          <button style={{ ...buttonPrimary, background: checklistTab==='berkas'?colorAccent:'#353a47', color: checklistTab==='berkas'?"#fff":colorAccent, borderRadius: "10px" }} onClick={()=>{setChecklistTab('berkas');}}>Checklist Berkas</button>
+        </div>
+        {/* Checklist Content */}
+        {checklistTab==='penulisan' && (
+          <div style={{ ...sectionStyle }} data-section-style className="checklist-section">
+            <h2 style={{ fontSize: "1.22em", fontWeight: 800, marginBottom: "1.1em" }}>Checklist Penulisan</h2>
             <ol style={{ padding: 0, margin: 0 }}>
               {penulisanList.filter(item => item && !item.checked).map(item => (
                 <li key={item.id} style={checklistItemStyle}>
-                  <span style={{ background: "#6366f1", color: "#fff", borderRadius: "7px", fontSize: "0.9em", padding: "2px 10px" }}>Penulisan</span>
+                  <span style={{ background: colorAccent, color: "#fff", borderRadius: "7px", fontSize: "0.9em", padding: "2px 10px" }}>Penulisan</span>
                   <span>{item.text}</span>
                 </li>
               ))}
@@ -683,12 +695,14 @@ export default function DashboardPage() {
               <div style={{ color: '#aaa', fontStyle: 'italic', fontSize: '1.08em', margin: "0.7em 0" }}>Semua penulisan selesai! 🎉</div>
             )}
           </div>
-          <div style={{ marginBottom: "1.5em" }}>
-            <h3 style={{ fontSize: "1.09em", fontWeight: 700, marginBottom: "0.6em" }}>📋 Tugas</h3>
+        )}
+        {checklistTab==='tugas' && (
+          <div style={{ ...sectionStyle }} data-section-style className="checklist-section">
+            <h2 style={{ fontSize: "1.22em", fontWeight: 800, marginBottom: "1.1em" }}>Checklist Tugas</h2>
             <ol style={{ padding: 0, margin: 0 }}>
               {tugasList.filter(item => item && !item.checked).map(item => (
                 <li key={item.id} style={checklistItemStyle}>
-                  <span style={{ background: "#6366f1", color: "#fff", borderRadius: "7px", fontSize: "0.9em", padding: "2px 10px" }}>Tugas</span>
+                  <span style={{ background: colorAccent, color: "#fff", borderRadius: "7px", fontSize: "0.9em", padding: "2px 10px" }}>Tugas</span>
                   <span>{item.text}</span>
                 </li>
               ))}
@@ -697,33 +711,47 @@ export default function DashboardPage() {
               <div style={{ color: '#aaa', fontStyle: 'italic', fontSize: '1.08em', margin: "0.7em 0" }}>Semua tugas selesai! 🎉</div>
             )}
           </div>
-          <div>
-            <h3 style={{ fontSize: "1.09em", fontWeight: 700, marginBottom: "0.6em" }}>📁 Berkas Seminar Proposal</h3>
-            <ol style={{ padding: 0, margin: 0 }}>
-              {berkasProposal.filter(item => item && !item.checked).map(item => (
-                <li key={item.id} style={checklistItemStyle}>
-                  <span style={{ background: "#6366f1", color: "#fff", borderRadius: "7px", fontSize: "0.9em", padding: "2px 10px" }}>Proposal</span>
-                  <span>{item.text}</span>
-                </li>
-              ))}
-              {berkasProposal.filter(item => item && !item.checked).length === 0 && (
-                <div style={{ color: '#aaa', fontStyle: 'italic', fontSize: '1.08em', margin: "0.7em 0" }}>Semua berkas proposal selesai! 🎉</div>
-              )}
-            </ol>
-            <h3 style={{ fontSize: "1.09em", fontWeight: 700, marginBottom: "0.6em", marginTop: "1em" }}>📁 Berkas Seminar Hasil</h3>
-            <ol style={{ padding: 0, margin: 0 }}>
-              {berkasHasil.filter(item => item && !item.checked).map(item => (
-                <li key={item.id} style={checklistItemStyle}>
-                  <span style={{ background: "#6366f1", color: "#fff", borderRadius: "7px", fontSize: "0.9em", padding: "2px 10px" }}>Hasil</span>
-                  <span>{item.text}</span>
-                </li>
-              ))}
-              {berkasHasil.filter(item => item && !item.checked).length === 0 && (
-                <div style={{ color: '#aaa', fontStyle: 'italic', fontSize: '1.08em', margin: "0.7em 0" }}>Semua berkas hasil selesai! 🎉</div>
-              )}
-            </ol>
-          </div>
-        </div>
+        )}
+        {checklistTab==='berkas' && (
+          <>
+            <div style={{ textAlign: "center", margin: "0.7em 0 1em 0", display: "flex", justifyContent: "center", gap: "1em", flexWrap: "wrap" }}>
+              <button style={{ ...buttonPrimary, background: berkasTab==='seminar'?colorAccent:'#353a47', color: berkasTab==='seminar'?"#fff":colorAccent, borderRadius: "10px" }} onClick={()=>setBerkasTab('seminar')}>Berkas Seminar</button>
+              <button style={{ ...buttonPrimary, background: berkasTab==='proposal'?colorAccent:'#353a47', color: berkasTab==='proposal'?"#fff":colorAccent, borderRadius: "10px" }} onClick={()=>setBerkasTab('proposal')}>Berkas Proposal</button>
+            </div>
+            {berkasTab==='seminar' && (
+              <div style={{ ...sectionStyle }} data-section-style className="checklist-section">
+                <h2 style={{ fontSize: "1.22em", fontWeight: 800, marginBottom: "1.1em" }}>Checklist Berkas Seminar</h2>
+                <ol style={{ padding: 0, margin: 0 }}>
+                  {berkasHasil.filter(item => item && !item.checked).map(item => (
+                    <li key={item.id} style={checklistItemStyle}>
+                      <span style={{ background: colorAccent, color: "#fff", borderRadius: "7px", fontSize: "0.9em", padding: "2px 10px" }}>Hasil</span>
+                      <span>{item.text}</span>
+                    </li>
+                  ))}
+                  {berkasHasil.filter(item => item && !item.checked).length === 0 && (
+                    <div style={{ color: '#aaa', fontStyle: 'italic', fontSize: '1.08em', margin: "0.7em 0" }}>Semua berkas hasil selesai! 🎉</div>
+                  )}
+                </ol>
+              </div>
+            )}
+            {berkasTab==='proposal' && (
+              <div style={{ ...sectionStyle }} data-section-style className="checklist-section">
+                <h2 style={{ fontSize: "1.22em", fontWeight: 800, marginBottom: "1.1em" }}>Checklist Berkas Proposal</h2>
+                <ol style={{ padding: 0, margin: 0 }}>
+                  {berkasProposal.filter(item => item && !item.checked).map(item => (
+                    <li key={item.id} style={checklistItemStyle}>
+                      <span style={{ background: colorAccent, color: "#fff", borderRadius: "7px", fontSize: "0.9em", padding: "2px 10px" }}>Proposal</span>
+                      <span>{item.text}</span>
+                    </li>
+                  ))}
+                  {berkasProposal.filter(item => item && !item.checked).length === 0 && (
+                    <div style={{ color: '#aaa', fontStyle: 'italic', fontSize: '1.08em', margin: "0.7em 0" }}>Semua berkas proposal selesai! 🎉</div>
+                  )}
+                </ol>
+              </div>
+            )}
+          </>
+        )}
 
         {/* Progress Section */}
         <div style={{ ...sectionStyle }} data-section-style className="progress-section">
