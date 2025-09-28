@@ -1,4 +1,5 @@
 "use client";
+// ...existing code...
 import { useEffect, useState } from "react";
 import { useAuth } from "../../src/context/AuthContext";
 import { getFirestore, doc, getDoc, setDoc } from "firebase/firestore";
@@ -7,6 +8,46 @@ import { useRouter } from "next/navigation";
 import { useAuthCalendar } from "../../src/context/AuthCalendarContext";
 
 export default function DashboardPage() {
+  // State utama TA
+  const [judul, setJudul] = useState('');
+  const [pembimbing1, setPembimbing1] = useState('');
+  const [pembimbing2, setPembimbing2] = useState('');
+  // Theme (default: light)
+  // Kalender
+  const [calendarLoading, setCalendarLoading] = useState(false);
+  const [calendarEvents, setCalendarEvents] = useState<any[]>([]);
+  const [tempJudul, setTempJudul] = useState(judul);
+  const [tempPembimbing1, setTempPembimbing1] = useState(pembimbing1);
+  const [tempPembimbing2, setTempPembimbing2] = useState(pembimbing2);
+  function getChecklistDoc(uid: string) {
+    return doc(getFirestore(app), "penulisan", uid);
+  }
+  const { loading } = useAuth();
+  const router = useRouter();
+  const [docRef, setDocRef] = useState<any>(null);
+  const [penulisanList, setPenulisanList] = useState<any[]>([]);
+  const [tugasList, setTugasList] = useState<any[]>([]);
+  const [berkasProposal, setBerkasProposal] = useState<any[]>([]);
+  const [berkasHasil, setBerkasHasil] = useState<any[]>([]);
+  const [checklist, setChecklist] = useState<any[]>([]);
+  // State untuk link TA
+  const [links, setLinks] = useState([
+    { label: "Word", url: "" },
+    { label: "One Drive", url: "" },
+    { label: "G Drive", url: "" }
+  ]);
+  const [showNoLinkModal, setShowNoLinkModal] = useState(false);
+  const [showEditLinksModal, setShowEditLinksModal] = useState(false);
+  const [tempLinks, setTempLinks] = useState([...links]);
+
+  function openEditLinksModal() {
+    setTempLinks([...links]);
+    setShowEditLinksModal(true);
+  }
+  function saveEditLinksModal() {
+    setLinks([...tempLinks]);
+    setShowEditLinksModal(false);
+  }
   // State tab checklist
   const [checklistTab, setChecklistTab] = useState<'penulisan'|'tugas'|'berkas'>('penulisan');
   const [berkasTab, setBerkasTab] = useState<'seminar'|'proposal'|null>(null);
@@ -17,122 +58,17 @@ export default function DashboardPage() {
   const [theme, setTheme] = useState<"dark" | "light">("dark");
     // State untuk toggle checklist
     const [showChecklist, setShowChecklist] = useState(false);
-  const [judul, setJudul] = useState("Judul Tugas Akhir");
-  const [pembimbing1, setPembimbing1] = useState("");
-  const [pembimbing2, setPembimbing2] = useState("");
+    // Duplicate state declarations removed
   const [editMode, setEditMode] = useState(false);
-  const [tempJudul, setTempJudul] = useState(judul);
-  const [tempPembimbing1, setTempPembimbing1] = useState(pembimbing1);
-  const [tempPembimbing2, setTempPembimbing2] = useState(pembimbing2);
-  const [penulisanList, setPenulisanList] = useState<any[]>([]);
-  const [tugasList, setTugasList] = useState<any[]>([]);
-  const [berkasList, setBerkasList] = useState<any[]>([]);
-  const [berkasProposal, setBerkasProposal] = useState<any[]>([]);
-  const [berkasHasil, setBerkasHasil] = useState<any[]>([]);
-  const [calendarEvents, setCalendarEvents] = useState<any[]>([]);
-  const [calendarLoading, setCalendarLoading] = useState(false);
-  const [userEmail, setUserEmail] = useState<string | null>(null);
-  const [checklist, setChecklist] = useState<any[]>([]);
-  const [docRef, setDocRef] = useState<any>(null);
-  const db = getFirestore(app);
-
-  // Ganti doc menjadi per user
-  function getDashboardDoc(uid: string) {
-    return doc(db, "dashboard", uid);
-  }
-  function getChecklistDoc(uid: string) {
-    return doc(getFirestore(app), "penulisan", uid);
-  }
-
-  const { loading } = useAuth();
-  const router = useRouter();
-
-  // Color palette mirip page catatan
-  const colorAccent = '#7c3aed'; // Ungu (accent utama)
-  const colorAccentLight = '#c7d2fe'; // Untuk mode terang
-  const colorAccentSoft = '#a5b4fc'; // Untuk border dan shadow di light
-  const colorAccentWarn = '#f59e42'; // Orange
-  const colorDanger = '#ef4444';
-  const colorSuccess = '#34d399';
-  const colorCardBg = theme === 'dark'
-    ? 'rgba(36, 41, 54, 0.82)'
-    : 'rgba(255,255,255,0.96)';
+  const colorAccent = '#7c3aed';
+  const colorCardBg = theme === 'dark' ? 'rgba(36, 41, 54, 0.82)' : 'rgba(255,255,255,0.96)';
+  const colorText = theme === 'dark' ? '#f3f4f6' : '#22223b';
+  const colorGlassShadow = theme === 'dark' ? '0 8px 32px rgba(124,58,237,0.22)' : '0 8px 32px rgba(124,58,237,0.09)';
+  const colorGlassBorder = theme === 'dark' ? '1.5px solid rgba(124,58,237,0.28)' : '1.5px solid #7c3aed';
   const colorMainBg = theme === 'dark'
     ? ('linear-gradient(120deg,#18181b 60%,#23272f 100%)' as string)
     : ('linear-gradient(120deg,#eef2ff 60%,#f5f7fb 100%)' as string);
-  const colorText = theme === 'dark' ? '#f3f4f6' : '#22223b';
-  const colorLabel = theme === 'dark' ? colorAccentSoft : colorAccent;
-  const colorInputBg = theme === 'dark' ? 'rgba(36,41,54,0.92)' : '#fff';
-  const colorInputBorder = theme === 'dark' ? colorAccentSoft : colorAccent;
-  const colorShadow = theme === 'dark'
-    ? '0 6px 20px rgba(124,58,237,0.12)'
-    : '0 6px 20px rgba(124,58,237,0.07)';
-  const colorGlassBorder = theme === 'dark'
-    ? '1.5px solid rgba(124,58,237,0.28)'
-    : '1.5px solid #7c3aed';
-  const colorGlassShadow = theme === 'dark'
-    ? '0 8px 32px rgba(124,58,237,0.22)'
-    : '0 8px 32px rgba(124,58,237,0.09)';
-
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const bodyTheme = document.body.getAttribute("data-theme");
-      setTheme(bodyTheme === "light" ? "light" : "dark");
-    }
-  }, []);
-
-  useEffect(() => {
-    async function fetchUserEmail() {
-      if (!calendarToken) return;
-      try {
-        const res = await fetch("https://www.googleapis.com/oauth2/v3/userinfo", {
-          headers: { Authorization: `Bearer ${calendarToken}` },
-        });
-        if (res.ok) {
-          const data = await res.json();
-          setUserEmail(data.email || null);
-        } else {
-          setUserEmail(null);
-        }
-      } catch {
-        setUserEmail(null);
-      }
-    }
-    async function fetchEvents() {
-      if (!calendarToken) return;
-      setCalendarLoading(true);
-      try {
-        const now = new Date();
-        const timeMin = encodeURIComponent(now.toISOString());
-        const res = await fetch(
-          `https://www.googleapis.com/calendar/v3/calendars/primary/events?orderBy=startTime&singleEvents=true&timeMin=${timeMin}&maxResults=10`,
-          {
-            headers: {
-              Authorization: `Bearer ${calendarToken}`,
-            },
-          }
-        );
-        if (res.status === 401) {
-          setCalendarEvents([]);
-          setUserEmail(null);
-          setCalendarLoading(false);
-          return;
-        }
-        const data = await res.json();
-        setCalendarEvents((data.items || []).filter(ev => typeof ev.description === "string" && ev.description.replace(/\s+/g, "").includes("__FROM_APP__")));
-      } catch {
-        setCalendarEvents([]);
-      }
-      setCalendarLoading(false);
-    }
-    if (calendarToken) {
-      fetchUserEmail();
-      fetchEvents();
-    } else {
-      setCalendarEvents([]);
-      setUserEmail(null);
-    }
-  }, [calendarToken]);
+  // ...existing code...
 
   // Proteksi login
   useEffect(() => {
@@ -477,6 +413,10 @@ export default function DashboardPage() {
     <div className="min-h-screen">
       <div style={{ fontFamily: "Inter, Roboto, Arial, sans-serif", background: colorMainBg }}>
         <style>{responsiveStyle}</style>
+        {/* Logo aplikasi */}
+        <div style={{ textAlign: "center", marginTop: "2em" }}>
+          <img src="/foto/png/logo.png" alt="Logo" style={{ width: 80, height: 80, borderRadius: 16, boxShadow: "0 2px 12px #6366f140" }} />
+        </div>
         <h1 style={{
           fontSize: "1.45em",
           fontWeight: 800,
@@ -515,7 +455,7 @@ export default function DashboardPage() {
         {showEditModal && (
           <div style={modalOverlay} onClick={() => setShowEditModal(false)}>
             <div style={modalCard} onClick={e => e.stopPropagation()}>
-              <h2 style={{ fontWeight: 700, fontSize: "1.22em", marginBottom: "1.2em" }}>Edit Judul & Pembimbing</h2>
+              <h2 style={{ fontWeight: 700, fontSize: "1.22em", marginBottom: "1.2em" }}>Edit Data Tugas Akhir</h2>
               <div style={{ marginBottom: "1em" }}>
                 <label>
                   Judul Tugas Akhir:
@@ -550,8 +490,55 @@ export default function DashboardPage() {
                   />
                 </label>
               </div>
+              <div style={{ marginBottom: "1em" }}>
+                <h3 style={{ fontWeight: 600, fontSize: "1.08em", marginBottom: "0.7em" }}>Link TA</h3>
+                {tempLinks.map((link, idx) => (
+                  <div key={idx} style={{ marginBottom: "1em" }}>
+                    <label>
+                      Label:
+                      <input
+                        type="text"
+                        value={link.label}
+                        onChange={e => {
+                          const newLinks = [...tempLinks];
+                          newLinks[idx].label = e.target.value;
+                          setTempLinks(newLinks);
+                        }}
+                        style={inputStyle}
+                      />
+                    </label>
+                    <label>
+                      Link URL:
+                      <input
+                        type="text"
+                        value={link.url}
+                        onChange={e => {
+                          const newLinks = [...tempLinks];
+                          newLinks[idx].url = e.target.value;
+                          setTempLinks(newLinks);
+                        }}
+                        style={inputStyle}
+                      />
+                    </label>
+                  </div>
+                ))}
+              </div>
               <div style={{ display: "flex", gap: "1em", marginTop: "1em" }}>
-                <button style={buttonPrimary} onClick={saveEditModal}>Simpan</button>
+                <button style={buttonPrimary} onClick={() => {
+                  setJudul(tempJudul);
+                  setPembimbing1(tempPembimbing1);
+                  setPembimbing2(tempPembimbing2);
+                  setLinks([...tempLinks]);
+                  setShowEditModal(false);
+                  if (docRef) {
+                    setDoc(docRef, {
+                      judul: tempJudul,
+                      pembimbing1: tempPembimbing1,
+                      pembimbing2: tempPembimbing2,
+                      links: tempLinks
+                    }, { merge: true });
+                  }
+                }}>Simpan</button>
                 <button style={buttonCancel} onClick={() => setShowEditModal(false)}>Batal</button>
               </div>
             </div>
@@ -604,9 +591,53 @@ export default function DashboardPage() {
                 </span>
               </div>
             </div>
+            {/* Tombol Link TA */}
+            <div style={{ display: "flex", gap: "0.7em", flexWrap: "wrap", marginBottom: "1em" }}>
+              {links.map((link, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => {
+                    if (link.url && link.url.trim() !== "") {
+                      window.open(link.url, "_blank", "noopener,noreferrer");
+                    } else {
+                      setShowNoLinkModal(true);
+                    }
+                  }}
+                  style={{
+                    fontSize: "0.95em",
+                    padding: "0.45em 1em",
+                    borderRadius: "7px",
+                    border: "1px solid #ccc",
+                    background: theme === "dark" ? "#23272f" : "#f3f3f7",
+                    color: theme === "dark" ? "#e2e2e2" : "#23272f",
+                    cursor: "pointer",
+                    boxShadow: "0 1px 4px rgba(0,0,0,0.07)",
+                    transition: "background 0.2s, box-shadow 0.2s",
+                    textDecoration: "none",
+                    marginBottom: "0.3em"
+                  }}
+                >
+                  {link.label}
+                </button>
+              ))}
+            </div>
+        {showNoLinkModal && (
+          <div style={modalOverlay} onClick={() => setShowNoLinkModal(false)}>
+            <div style={modalCard} onClick={e => e.stopPropagation()}>
+              <div style={{ textAlign: "center", fontWeight: 600, fontSize: "1.12em", marginBottom: "1.2em" }}>
+                Link belum tersedia.<br />Silakan isi link terlebih dahulu di menu <b>Edit Data</b>.
+              </div>
+              <div style={{ display: "flex", justifyContent: "center" }}>
+                <button style={buttonPrimary} onClick={() => setShowNoLinkModal(false)}>Tutup</button>
+              </div>
+            </div>
+          </div>
+        )}
             <button style={{ ...buttonPrimary, marginTop: "0.5em", width: 140 }} onClick={openEditModal}>Edit Data</button>
           </div>
         </div>
+
+        {/* Modal Edit Link TA */}
 
         {/* Main Menu Cards */}
         <div style={{
@@ -621,55 +652,8 @@ export default function DashboardPage() {
           alignItems: "stretch",
           overflowX: "auto"
         }} className="main-menu-cards">
-          {[
-            { href: "/penulisan", label: "📝 Penulisan" },
-            { href: "/catatan", label: "📒 Catatan" },
-            { href: "/referensi", label: "📚 Referensi" },
-            { href: "/kalender", label: "📅 Kalender" },
-            { href: "/panduan", label: "📘 Panduan" }, // <-- Tambahkan ini
-          ].map(card => (
-            <a
-              key={card.href}
-              href={card.href}
-              style={{
-                display: "flex",
-                flexDirection: "row",
-                alignItems: "center",
-                justifyContent: "center",
-                width: "100%", // full lebar
-                padding: "1.2em 0.7em",
-                background: cardBg,
-                borderRadius: "16px",
-                boxShadow: cardShadow,
-                textAlign: "center",
-                textDecoration: "none",
-                color: cardText,
-                fontWeight: 700,
-                fontSize: "1.18em",
-                transition: "box-shadow 0.2s, transform 0.2s, background 0.2s",
-                cursor: "pointer",
-                border: `1.5px solid ${borderColor}`,
-                margin: "0.2em 0"
-              }}
-              onMouseOver={e => {
-                e.currentTarget.style.boxShadow = theme === "dark"
-                  ? "0 8px 32px rgba(99,102,241,0.18)"
-                  : "0 8px 32px rgba(99,102,241,0.12)";
-                e.currentTarget.style.transform = "translateY(-2px) scale(1.03)";
-                e.currentTarget.style.background = theme === "dark"
-                  ? "#353a47"
-                  : "#e0e7ff";
-              }}
-              onMouseOut={e => {
-                e.currentTarget.style.boxShadow = cardShadow;
-                e.currentTarget.style.transform = "none";
-                e.currentTarget.style.background = cardBg;
-              }}
-            >
-              {card.label}
-            </a>
-          ))}
-        </div>
+        {/* Section tombol navigasi dihapus sesuai permintaan */}
+      </div>
 
         {/* Checklist Section */}
         {/* Tombol Toggle Checklist */}

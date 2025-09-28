@@ -96,6 +96,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet" />
+        {/* Manifest dan favicon untuk shortcut */}
+        <link rel="manifest" href="/manifest.json" />
+        <link rel="icon" href="/foto/png/logo.png" />
+        <meta name="theme-color" content="#6366f1" />
   <style>{`
           .nav-link {
             color: inherit;
