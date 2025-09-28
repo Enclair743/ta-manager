@@ -88,15 +88,27 @@ export default function DashboardPage() {
       if (!docRef) return;
       const snap = await getDoc(docRef);
       if (snap.exists()) {
-  const data = snap.data() as { penulisanList?: any[], tugasList?: any[], berkasProposal?: any[], berkasHasil?: any[], judul?: string, pembimbing1?: string, pembimbing2?: string };
-  setChecklist(data.penulisanList || []);
-  setPenulisanList(data.penulisanList || []);
-  setTugasList(data.tugasList || []);
-  setBerkasProposal(data.berkasProposal || []);
-  setBerkasHasil(data.berkasHasil || []);
-  setJudul(data.judul || "Judul Tugas Akhir");
-  setPembimbing1(data.pembimbing1 || "");
-  setPembimbing2(data.pembimbing2 || "");
+          const data = snap.data() as {
+            penulisanList?: any[],
+            tugasList?: any[],
+            berkasProposal?: any[],
+            berkasHasil?: any[],
+            judul?: string,
+            pembimbing1?: string,
+            pembimbing2?: string,
+            links?: { label: string, url: string }[]
+          };
+          setChecklist(data.penulisanList || []);
+          setPenulisanList(data.penulisanList || []);
+          setTugasList(data.tugasList || []);
+          setBerkasProposal(data.berkasProposal || []);
+          setBerkasHasil(data.berkasHasil || []);
+          setJudul(data.judul || "Judul Tugas Akhir");
+          setPembimbing1(data.pembimbing1 || "");
+          setPembimbing2(data.pembimbing2 || "");
+          if (Array.isArray(data.links)) {
+            setLinks(data.links);
+          }
       }
     }
     fetchChecklist();
