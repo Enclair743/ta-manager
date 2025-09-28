@@ -123,29 +123,20 @@ export default function CatatanPage() {
   }, []);
 
   useEffect(() => {
-    async function updateAndFetchCatatan(email) {
+    async function fetchCatatan(email) {
       setLoading(true);
       try {
-        await fetch("/api/save-catatan", { method: "POST" });
-        const res = await fetch("/catatan.json");
+        const res = await fetch("/api/catatan");
         const data = await res.json();
-        const mapped = (data.pages || [])
-          .filter((item) => {
-            const userVal = item.user ?? item.User ?? "";
-            return userVal === email;
-          })
-          .map((item) => ({
+        const mapped = (data || [])
+          .filter(item => item.user === email)
+          .map(item => ({
             id: item.id,
-            title: item.title ?? item.Nama ?? "",
-            tanggal: item.tanggal ?? item.Tanggal ?? "",
-            url: item.url ?? item.Link ?? "",
-            user: item.user ?? item.User ?? "",
-            jenis:
-              (Array.isArray(item.jenis) && item.jenis[0]?.text?.content)
-              || (Array.isArray(item.Jenis) && item.Jenis[0]?.text?.content)
-              || (typeof item.jenis === "string" ? item.jenis : undefined)
-              || (typeof item.Jenis === "string" ? item.Jenis : undefined)
-              || "asistensi",
+            title: item.title,
+            tanggal: item.tanggal,
+            url: item.url,
+            user: item.user,
+            jenis: item.jenis || "asistensi",
           }));
         setCatatanList(mapped);
       } catch (err) {
@@ -154,7 +145,7 @@ export default function CatatanPage() {
       setLoading(false);
     }
     if (user && typeof user.email === "string" && user.email) {
-      updateAndFetchCatatan(user.email);
+      fetchCatatan(user.email);
     }
   }, [user]);
 

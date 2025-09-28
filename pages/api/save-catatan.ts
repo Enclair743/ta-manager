@@ -1,7 +1,7 @@
 import { Client } from "@notionhq/client";
 import type { NextApiRequest, NextApiResponse } from "next";
-import fs from "fs";
-import path from "path";
+import { getFirestore, doc, setDoc } from "firebase/firestore";
+import { app } from "../../src/firebase/firebaseConfig";
 
 const notion = new Client({ auth: process.env.NOTION_TOKEN as string });
 const databaseId = process.env.NOTION_DATA_SOURCE_ID as string;
@@ -54,9 +54,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
   try {
     const pages = await fetchNotionPages();
-    const filePath = path.join(process.cwd(), "public", "catatan.json");
-    fs.writeFileSync(filePath, JSON.stringify({ pages }, null, 2), "utf-8");
-    res.status(200).json({ success: true, count: pages.length });
+    const db = getFirestore(app);
+    let saved = 0;
+    for (const page of pages) {
+      await setDoc(doc(db, "catatan", page.id), page);
+      saved++;
+    }
+    res.status(200).json({ success: true, count: saved });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
