@@ -1,4 +1,6 @@
 import { NextApiRequest, NextApiResponse } from "next";
+import { getFirestore, doc, deleteDoc } from "firebase/firestore";
+import { app } from "../../src/firebase/firebaseConfig";
 
 // You need to set your Notion integration token here
 const NOTION_TOKEN = process.env.NOTION_TOKEN;
@@ -27,6 +29,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const error = await notionRes.json();
       return res.status(notionRes.status).json({ error });
     }
+    // Hapus data di Firestore
+    const db = getFirestore(app);
+    await deleteDoc(doc(db, "catatan", pageId));
+
     return res.status(200).json({ success: true });
   } catch (err) {
     return res.status(500).json({ error: "Failed to archive page" });
